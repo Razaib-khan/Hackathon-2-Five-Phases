@@ -1,152 +1,140 @@
-import React, { useState } from 'react';
-import './TaskForm.css';
+'use client';
 
-interface FormData {
-  title: string;
-  priority: string;
-  description: string;
-  dueDate: string;
-}
+/**
+ * Task Form Component
+ *
+ * Used for creating and editing tasks.
+ * Features:
+ * - Title input (required)
+ * - Description textarea (optional)
+ * - Form validation
+ * - Loading state
+ */
+
+import { useState, useEffect } from 'react';
+import type { Task, TaskCreateRequest, TaskUpdateRequest } from '@/types';
 
 interface TaskFormProps {
-  onSubmit: (data: FormData) => Promise<void>;
-  onCancel?: () => void;
-  initialData?: Partial<FormData> & { id?: string };
+  task?: Task;
+  onSubmit: (data: TaskCreateRequest | TaskUpdateRequest) => Promise<void>;
+  onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, onCancel, initialData = {} }) => {
-  const [formData, setFormData] = useState({
-    title: initialData.title || '',
-    priority: initialData.priority || 'medium',
-    description: initialData.description || '',
-    dueDate: initialData.dueDate || '',
-  });
+export function TaskForm({ task, onSubmit, onCancel, isSubmitting = false }: TaskFormProps) {
+  const [title, setTitle] = useState(task?.title || '');
+  const [description, setDescription] = useState(task?.description || '');
+  const [error, setError] = useState('');
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isEditing = !!task;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Title is required (minimum validation per spec)
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    } else if (formData.title.length > 200) {
-      newErrors.title = 'Title must be 200 characters or less';
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title);
+      setDescription(task.description || '');
     }
-
-    // Priority validation
-    if (!['low', 'medium', 'high', 'urgent'].includes(formData.priority)) {
-      newErrors.priority = 'Priority must be valid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }, [task]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (!validateForm()) {
+    if (!title.trim()) {
+      setError('Title is required');
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const submitData = {
-        title: formData.title,
-        priority: formData.priority,
-        description: formData.description,
-        dueDate: formData.dueDate,
-      };
+    if (title.length > 200) {
+      setError('Title must be 200 characters or less');
+      return;
+    }
 
-      await onSubmit(submitData);
-    } catch (error) {
-      console.error('Error submitting task:', error);
-    } finally {
-      setIsLoading(false);
+    if (description && description.length > 1000) {
+      setError('Description must be 1000 characters or less');
+      return;
+    }
+
+    try {
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim() || undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task');
     }
   };
 
   return (
-    <div className="task-form-container">
-      <h2>{initialData.id ? 'Edit Task' : 'Create New Task'}</h2>
-      <form onSubmit={handleSubmit} className="task-form">
-        <div className="form-group">
-          <label htmlFor="title">Title *</label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className={`form-input ${errors.title ? 'error' : ''}`}
-            placeholder="Enter task title"
-            required
-          />
-          {errors.title && <span className="error-message">{errors.title}</span>}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
         </div>
+      )}
 
-        <div className="form-group">
-          <label htmlFor="priority">Priority</label>
-          <select
-            id="priority"
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            className="form-input"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-        </div>
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          Title <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="input mt-1"
+          placeholder="What needs to be done?"
+          maxLength={200}
+          required
+          autoFocus
+        />
+        <p className="mt-1 text-xs text-gray-500">{title.length}/200</p>
+      </div>
 
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="form-input"
-            placeholder="Enter task description"
-            rows={3}
-          />
-        </div>
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          Description
+        </label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="input mt-1"
+          placeholder="Add details..."
+          rows={3}
+          maxLength={1000}
+        />
+        <p className="mt-1 text-xs text-gray-500">{description.length}/1000</p>
+      </div>
 
-        <div className="form-actions">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Saving...' : (initialData.id ? 'Update Task' : 'Create Task')}
-          </button>
-          {onCancel && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onCancel}
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
+      <div className="flex gap-3 justify-end pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn-secondary"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={isSubmitting || !title.trim()}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          ) : isEditing ? (
+            'Update Task'
+          ) : (
+            'Create Task'
           )}
-        </div>
-      </form>
-    </div>
+        </button>
+      </div>
+    </form>
   );
-};
-
-export default TaskForm;
+}

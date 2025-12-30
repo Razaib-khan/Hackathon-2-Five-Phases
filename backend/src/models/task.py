@@ -7,6 +7,7 @@ Represents a todo item belonging to a user with:
 - title: Required, max 200 chars
 - description: Optional, max 1000 chars
 - completed: Boolean, defaults to false
+<<<<<<< HEAD
 - priority: High/Medium/Low/None (FR-001)
 - due_date: Optional deadline (FR-011)
 - status: To Do/In Progress/Done for Kanban (FR-026)
@@ -14,12 +15,17 @@ Represents a todo item belonging to a user with:
 - custom_order: User-defined position (FR-044)
 - recurrence_pattern: Daily/Weekly/Monthly config (FR-072)
 - version: Optimistic locking version (FR-103)
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 - created_at, updated_at: timestamps
 
 Relationships:
 - user: Many-to-one relationship with User
+<<<<<<< HEAD
 - tags: Many-to-many relationship with Tag
 - subtasks: One-to-many relationship with Subtask
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 
 Indexes:
 - user_id: For filtering tasks by user
@@ -27,6 +33,7 @@ Indexes:
 """
 
 from datetime import datetime
+<<<<<<< HEAD
 from typing import TYPE_CHECKING, Optional, Dict, Any, List
 from uuid import UUID, uuid4
 
@@ -37,6 +44,15 @@ if TYPE_CHECKING:
     from .user import User
     from .task_tag import TaskTag
     from .subtask import Subtask
+=======
+from typing import TYPE_CHECKING, Optional
+from uuid import UUID, uuid4
+
+from sqlmodel import Field, Relationship, SQLModel, Index
+
+if TYPE_CHECKING:
+    from .user import User
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 
 
 class Task(SQLModel, table=True):
@@ -52,6 +68,7 @@ class Task(SQLModel, table=True):
     title: str = Field(max_length=200)
     description: Optional[str] = Field(default=None, max_length=1000)
     completed: bool = Field(default=False)
+<<<<<<< HEAD
 
     # New fields for advanced features (Phase 1 migrations)
     priority: str = Field(default="none", max_length=10)  # high/medium/low/none
@@ -62,13 +79,20 @@ class Task(SQLModel, table=True):
     recurrence_pattern: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))  # JSONB config
     version: int = Field(default=1)  # optimistic locking
 
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column_kwargs={"onupdate": datetime.utcnow},
     )
 
+<<<<<<< HEAD
     # Relationships
     user: Optional["User"] = Relationship(back_populates="tasks")
     task_tags: List["TaskTag"] = Relationship(back_populates="task")
     subtasks: List["Subtask"] = Relationship(back_populates="task", cascade_delete=True)
+=======
+    # Many-to-one relationship: Task belongs to User
+    user: Optional["User"] = Relationship(back_populates="tasks")
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)

@@ -2,17 +2,30 @@
 Task Request/Response Schemas
 
 Implements:
+<<<<<<< HEAD
 - TaskCreateRequest: Create task with all fields including priority, tags, due date
 - TaskUpdateRequest: Update any task field with optimistic locking
 - TaskResponse: Single task response with nested tags and subtasks
+=======
+- TaskCreateRequest: Create task with title, optional description
+- TaskUpdateRequest: Update title, description, completed status
+- TaskResponse: Single task response
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 - TaskListResponse: Paginated task list
 """
 
 from datetime import datetime
+<<<<<<< HEAD
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
+=======
+from typing import List, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 
 
 class TaskCreateRequest(BaseModel):
@@ -22,11 +35,14 @@ class TaskCreateRequest(BaseModel):
     Validates:
     - title: Required, 1-200 characters
     - description: Optional, max 1000 characters
+<<<<<<< HEAD
     - priority: One of high/medium/low/none (FR-001)
     - due_date: Optional deadline (FR-011)
     - status: One of todo/in_progress/done (FR-026)
     - tag_ids: List of tag UUIDs to assign (max 10) (FR-017)
     - recurrence_pattern: Daily/Weekly/Monthly config (FR-072)
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
     """
 
     title: str = Field(
@@ -42,6 +58,7 @@ class TaskCreateRequest(BaseModel):
         description="Optional task description",
         examples=["Write comprehensive docs for the API endpoints"],
     )
+<<<<<<< HEAD
     priority: str = Field(
         default="none",
         pattern="^(high|medium|low|none)$",
@@ -70,14 +87,22 @@ class TaskCreateRequest(BaseModel):
         description="Recurrence configuration (daily/weekly/monthly)",
         examples=[{"enabled": True, "frequency": "daily", "interval": 1}],
     )
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 
 
 class TaskUpdateRequest(BaseModel):
     """
+<<<<<<< HEAD
     Task update request schema with optimistic locking.
 
     All fields optional - only provided fields are updated.
     Includes version field for conflict detection (FR-103).
+=======
+    Task update request schema.
+
+    All fields optional - only provided fields are updated.
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
     """
 
     title: Optional[str] = Field(
@@ -95,6 +120,7 @@ class TaskUpdateRequest(BaseModel):
         default=None,
         description="Task completion status",
     )
+<<<<<<< HEAD
     priority: Optional[str] = Field(
         default=None,
         pattern="^(high|medium|low|none)$",
@@ -130,12 +156,19 @@ class TaskUpdateRequest(BaseModel):
 
 class TaskResponse(BaseModel):
     """Single task response schema with nested tags and subtasks."""
+=======
+
+
+class TaskResponse(BaseModel):
+    """Single task response schema."""
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
 
     id: UUID = Field(..., description="Task UUID")
     user_id: UUID = Field(..., description="Owner user UUID")
     title: str = Field(..., description="Task title")
     description: Optional[str] = Field(None, description="Task description")
     completed: bool = Field(..., description="Completion status")
+<<<<<<< HEAD
 
     # New fields from advanced features
     priority: str = Field(..., description="Priority level (high/medium/low/none)")
@@ -154,6 +187,8 @@ class TaskResponse(BaseModel):
     subtask_count: Optional[int] = Field(default=0, description="Total subtasks")
     completed_subtask_count: Optional[int] = Field(default=0, description="Completed subtasks")
 
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
@@ -188,6 +223,7 @@ class TaskListResponse(BaseModel):
         ...,
         description="Number of items per page",
     )
+<<<<<<< HEAD
 
 
 # Bulk Operations Schemas (FR-104, FR-105)
@@ -227,3 +263,5 @@ class BulkTaskDeleteRequest(BaseModel):
         max_length=50,
         description="List of task UUIDs to delete (max 50)",
     )
+=======
+>>>>>>> 7375bb7 (feat(phase-2): implement Neon database configuration and backend/frontend scaffolding)

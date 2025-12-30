@@ -43,8 +43,6 @@ export interface Subtask {
   title: string;
   completed: boolean;
   order_index: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface TaskListResponse {
