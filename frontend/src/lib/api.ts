@@ -1,6 +1,7 @@
 import { TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions, TaskListResponse } from '@/models/task';
 import { TagCreateRequest, TagUpdateRequest, TagListResponse } from '@/models/tag';
 import { UserPreferences, UserPreferencesUpdateRequest } from '@/models/user-preferences';
+import { UserSettings, UserSettingsUpdateData } from '@/types';
 
 /**
  * API Client Utilities

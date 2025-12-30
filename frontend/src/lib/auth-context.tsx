@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     setLoading(true)
     try {
-      await api.logout()
+      api.logout() // Local storage cleanup
       clearAuthTokens()
       setUser(null)
       router.push('/login')
