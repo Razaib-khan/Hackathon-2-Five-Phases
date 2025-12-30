@@ -55,3 +55,25 @@ htmlcov/
 
 # Logs
 *.log
+
+# Node.js / Frontend
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+.pnp/
+.pnp.js
+.yarn/
+
+# Frontend build
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/node_modules/
+
+# Backend specific
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.env
