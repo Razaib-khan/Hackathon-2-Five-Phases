@@ -1,0 +1,56 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "projectSettings": {
+    "name": "aido-frontend",
+    "installCommand": "npm ci",
+    "buildCommand": "npm run build",
+    "outputDirectory": ".next",
+    "framework": "nextjs"
+  },
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "env": [
+    {
+      "key": "NEXT_PUBLIC_API_URL",
+      "value": "@api-url",
+      "description": "Backend API URL"
+    }
+  ],
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ]
+}
