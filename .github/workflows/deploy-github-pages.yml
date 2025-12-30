@@ -57,6 +57,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -76,11 +78,17 @@ jobs:
           NEXT_PUBLIC_API_URL: 'https://huggingface.co/spaces/YOUR_USERNAME/aido-todo-api'
         run: npm run build
 
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/out
+          force_orphan: true
 
       - name: Deployment summary
         run: |
