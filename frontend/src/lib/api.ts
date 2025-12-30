@@ -77,30 +77,41 @@ export async function logout() {
   localStorage?.removeItem('authToken')
 }
 
-export async function getTasks() {
-  return apiCall('/tasks', { method: 'GET' })
+export async function getTasks(userId: string, filters?: Record<string, unknown>) {
+  const queryParams = new URLSearchParams()
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value))
+      }
+    })
+  }
+  const queryString = queryParams.toString()
+  const endpoint = `/tasks?user_id=${userId}${queryString ? `&${queryString}` : ''}`
+  return apiCall(endpoint, { method: 'GET' })
 }
 
-export async function createTask(title: string, description?: string) {
+export async function createTask(userId: string, data: Record<string, unknown>) {
   return apiCall('/tasks', {
     method: 'POST',
-    body: JSON.stringify({ title, description }),
+    body: JSON.stringify({ ...data, user_id: userId }),
   })
 }
 
-export async function updateTask(id: string, data: Record<string, unknown>) {
-  return apiCall(`/tasks/${id}`, {
+export async function updateTask(userId: string, taskId: string, data: Record<string, unknown>) {
+  return apiCall(`/tasks/${taskId}`, {
     method: 'PUT',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, user_id: userId }),
   })
 }
 
-export async function toggleTaskComplete(id: string, completed: boolean) {
-  return updateTask(id, { completed })
+export async function toggleTaskComplete(userId: string, taskId: string, completed?: boolean) {
+  const response = await apiCall(`/tasks/${taskId}`, { method: 'GET' })
+  return updateTask(userId, taskId, { completed: !response.completed })
 }
 
-export async function deleteTask(id: string) {
-  return apiCall(`/tasks/${id}`, { method: 'DELETE' })
+export async function deleteTask(userId: string, taskId: string) {
+  return apiCall(`/tasks/${taskId}`, { method: 'DELETE' })
 }
 
 export async function checkHealth() {
