@@ -77,10 +77,10 @@ export async function logout() {
   localStorage?.removeItem('authToken')
 }
 
-export async function getTasks(userId: string, filters?: Record<string, unknown>) {
+export async function getTasks(userId: string, filters?: any) {
   const queryParams = new URLSearchParams()
   if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value))
       }
@@ -91,17 +91,17 @@ export async function getTasks(userId: string, filters?: Record<string, unknown>
   return apiCall(endpoint, { method: 'GET' })
 }
 
-export async function createTask(userId: string, data: Record<string, unknown>) {
+export async function createTask(userId: string, data?: any) {
   return apiCall('/tasks', {
     method: 'POST',
-    body: JSON.stringify({ ...data, user_id: userId }),
+    body: JSON.stringify({ ...(data || {}), user_id: userId }),
   })
 }
 
-export async function updateTask(userId: string, taskId: string, data: Record<string, unknown>) {
+export async function updateTask(userId: string, taskId: string, data?: any) {
   return apiCall(`/tasks/${taskId}`, {
     method: 'PUT',
-    body: JSON.stringify({ ...data, user_id: userId }),
+    body: JSON.stringify({ ...(data || {}), user_id: userId }),
   })
 }
 
