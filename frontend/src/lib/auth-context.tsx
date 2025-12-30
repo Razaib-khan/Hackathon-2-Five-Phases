@@ -18,6 +18,7 @@ export interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -39,6 +40,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     },
     signup: async () => {
+      setLoading(true)
+      try {
+        // Stub: will be implemented in Phase 3
+      } finally {
+        setLoading(false)
+      }
+    },
+    register: async () => {
       setLoading(true)
       try {
         // Stub: will be implemented in Phase 3
@@ -72,6 +81,7 @@ export function useAuth(): AuthContextType {
       isLoading: false,
       login: async () => {},
       signup: async () => {},
+      register: async () => {},
       logout: async () => {},
     }
   }
