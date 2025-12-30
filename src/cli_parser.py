@@ -31,11 +31,11 @@ def create_parser() -> argparse.ArgumentParser:
         Configured ArgumentParser with all subcommands.
     """
     parser = argparse.ArgumentParser(
-        prog="todo",
-        description="CLI Todo Application - Manage your tasks from the command line"
+        prog="aido",
+        description="AIDO - AI-Powered Interactive Task Manager"
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    subparsers = parser.add_subparsers(dest="command", required=False, help="Available commands")
 
     # Create command
     create_parser = subparsers.add_parser("create", help="Create a new task")
