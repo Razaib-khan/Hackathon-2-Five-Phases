@@ -7,7 +7,6 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/deploy-github-pages.yml'
-      - 'vercel.json'
   workflow_dispatch:
 
 permissions:
@@ -15,16 +14,14 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    name: Build Static Site
+    name: Build and Deploy to GitHub Pages
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -37,33 +34,26 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
-      - name: Build with GitHub Pages settings
+      - name: Build static site
         working-directory: ./frontend
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_API_URL: 'https://huggingface.co/spaces/YOUR_USERNAME/aido-todo-api'
+          NEXT_PUBLIC_API_URL: ${{ secrets.HUGGINGFACE_API_URL || 'https://huggingface.co/spaces/YOUR_USERNAME/aido-todo-api' }}
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./frontend/out
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
 
-  deploy:
-    runs-on: ubuntu-latest
-    name: Deploy to GitHub Pages
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v3
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/out
+          force_orphan: true
 
       - name: Deployment summary
         run: |
           echo "✅ Frontend deployed to GitHub Pages"
-          echo "URL: ${{ steps.deployment.outputs.page_url }}"
-          echo "Repository: ${{ github.repository }}"
+          echo "URL: https://razaib-khan.github.io/Hackathon-2-Five-Phases/"
