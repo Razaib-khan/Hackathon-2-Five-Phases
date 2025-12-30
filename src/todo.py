@@ -5,6 +5,7 @@ import sys
 
 from cli_parser import parse_args
 from task_manager import TaskManager
+from interactive_session import InteractiveSession
 
 
 def main() -> int:
@@ -14,12 +15,15 @@ def main() -> int:
         Exit code (0 for success, 1 for error).
     """
     args = parse_args()
-    manager = TaskManager()
 
+    # If no command specified, launch interactive mode
     if args.command is None:
-        print("Usage: todo <command> [arguments]", file=sys.stderr)
-        print("Run 'todo --help' for available commands.", file=sys.stderr)
-        return 1
+        session = InteractiveSession()
+        session.cmdloop()
+        return 0
+
+    # Single-command mode with shared TaskManager
+    manager = TaskManager()
 
     # Command dispatch
     if args.command == "create":
