@@ -77,7 +77,7 @@ export async function logout() {
   localStorage?.removeItem('authToken')
 }
 
-export async function getTasks(userId: string, filters?: any) {
+export async function getTasks(userId: string, filters?: any): Promise<{ tasks: any[]; total: number }> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -88,30 +88,30 @@ export async function getTasks(userId: string, filters?: any) {
   }
   const queryString = queryParams.toString()
   const endpoint = `/tasks?user_id=${userId}${queryString ? `&${queryString}` : ''}`
-  return apiCall(endpoint, { method: 'GET' })
+  return apiCall<{ tasks: any[]; total: number }>(endpoint, { method: 'GET' })
 }
 
-export async function createTask(userId: string, data?: any) {
-  return apiCall('/tasks', {
+export async function createTask(userId: string, data?: any): Promise<any> {
+  return apiCall<any>('/tasks', {
     method: 'POST',
     body: JSON.stringify({ ...(data || {}), user_id: userId }),
   })
 }
 
-export async function updateTask(userId: string, taskId: string, data?: any) {
-  return apiCall(`/tasks/${taskId}`, {
+export async function updateTask(userId: string, taskId: string, data?: any): Promise<any> {
+  return apiCall<any>(`/tasks/${taskId}`, {
     method: 'PUT',
     body: JSON.stringify({ ...(data || {}), user_id: userId }),
   })
 }
 
-export async function toggleTaskComplete(userId: string, taskId: string, completed?: boolean) {
-  const response = await apiCall(`/tasks/${taskId}`, { method: 'GET' })
+export async function toggleTaskComplete(userId: string, taskId: string, completed?: boolean): Promise<any> {
+  const response = await apiCall<any>(`/tasks/${taskId}`, { method: 'GET' })
   return updateTask(userId, taskId, { completed: !response.completed })
 }
 
-export async function deleteTask(userId: string, taskId: string) {
-  return apiCall(`/tasks/${taskId}`, { method: 'DELETE' })
+export async function deleteTask(userId: string, taskId: string): Promise<any> {
+  return apiCall<any>(`/tasks/${taskId}`, { method: 'DELETE' })
 }
 
 export async function checkHealth() {
