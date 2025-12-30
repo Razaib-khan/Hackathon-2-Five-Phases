@@ -83,7 +83,7 @@ export default function TasksPage() {
   }, [user, fetchTasks]);
 
   // Create task
-  const handleCreate = async (data: TaskCreateRequest) => {
+  const handleCreate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
     if (!user) return;
 
     setIsSubmitting(true);
