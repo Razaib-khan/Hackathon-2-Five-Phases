@@ -21,9 +21,14 @@ export async function apiCall<T>(
 ): Promise<T> {
   const { skipAuth = false, ...fetchOptions } = options
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...fetchOptions.headers,
+  }
+
+  if (fetchOptions.headers) {
+    if (typeof fetchOptions.headers === 'object' && !Array.isArray(fetchOptions.headers)) {
+      Object.assign(headers, fetchOptions.headers)
+    }
   }
 
   if (!skipAuth) {
