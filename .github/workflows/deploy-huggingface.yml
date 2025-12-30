@@ -24,5 +24,10 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git remote add huggingface https://oauth2:${{ secrets.HUGGINGFACE_TOKEN }}@huggingface.co/spaces/YOUR_USERNAME/aido-todo-api
+          git remote add huggingface https://oauth2:${{ secrets.HUGGINGFACE_TOKEN }}@huggingface.co/spaces/${{ secrets.HUGGINGFACE_USERNAME }}/aido-todo-api
           git push -f huggingface main:main
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Backend deployed to Hugging Face Spaces"
+          echo "URL: https://huggingface.co/spaces/${{ secrets.HUGGINGFACE_USERNAME }}/aido-todo-api"
