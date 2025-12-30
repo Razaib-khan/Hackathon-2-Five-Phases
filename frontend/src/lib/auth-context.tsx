@@ -4,7 +4,7 @@
 
 'use client'
 
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 
 export interface User {
   id: string
@@ -15,6 +15,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null
   loading: boolean
+  isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -22,13 +23,37 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [loading, setLoading] = useState(false)
+
   const value: AuthContextType = {
     user: null,
-    loading: false,
-    login: async () => {},
-    signup: async () => {},
-    logout: async () => {},
+    loading,
+    isLoading: loading,
+    login: async () => {
+      setLoading(true)
+      try {
+        // Stub: will be implemented in Phase 3
+      } finally {
+        setLoading(false)
+      }
+    },
+    signup: async () => {
+      setLoading(true)
+      try {
+        // Stub: will be implemented in Phase 3
+      } finally {
+        setLoading(false)
+      }
+    },
+    logout: async () => {
+      setLoading(true)
+      try {
+        // Stub: will be implemented in Phase 3
+      } finally {
+        setLoading(false)
+      }
+    },
   }
 
   return (
@@ -44,6 +69,7 @@ export function useAuth(): AuthContextType {
     return {
       user: null,
       loading: false,
+      isLoading: false,
       login: async () => {},
       signup: async () => {},
       logout: async () => {},
