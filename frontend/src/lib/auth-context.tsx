@@ -16,6 +16,7 @@ export interface AuthContextType {
   user: User | null
   loading: boolean
   isLoading: boolean
+  isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user: null,
     loading,
     isLoading: loading,
+    isAuthenticated: false,
     login: async () => {
       setLoading(true)
       try {
@@ -79,6 +81,7 @@ export function useAuth(): AuthContextType {
       user: null,
       loading: false,
       isLoading: false,
+      isAuthenticated: false,
       login: async () => {},
       signup: async () => {},
       register: async () => {},
