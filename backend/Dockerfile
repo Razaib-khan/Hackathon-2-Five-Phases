@@ -38,7 +38,7 @@ COPY . .
 
 # Health check (simple file existence check instead of HTTP)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD test -f /app/src/main.py || exit 1
+    CMD python -c "import httpx; httpx.get('http://localhost:7860/health')"
 
 # HF Spaces standard port
 EXPOSE 7860
