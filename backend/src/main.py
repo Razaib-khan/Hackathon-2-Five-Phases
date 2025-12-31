@@ -18,13 +18,23 @@ from sqlmodel import SQLModel
 from .db.session import engine
 
 # Load environment variables
-load_dotenv()
+try:
+    load_dotenv()
+except Exception as e:
+    print(f"Warning: Could not load .env file: {e}")
 
-# Log startup configuration
-print("🚀 AIDO Backend Starting...")
-print(f"  DATABASE_URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
-print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
-print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
+# Log startup configuration (safely)
+try:
+    print("🚀 AIDO Backend Starting...")
+    db_url = os.getenv('DATABASE_URL', 'NOT SET')
+    if db_url and db_url != 'NOT SET':
+        print(f"  DATABASE_URL: {db_url[:50]}...")
+    else:
+        print(f"  DATABASE_URL: NOT SET")
+    print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
+    print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
+except Exception as e:
+    print(f"Warning: Error logging configuration: {e}")
 
 
 @asynccontextmanager
