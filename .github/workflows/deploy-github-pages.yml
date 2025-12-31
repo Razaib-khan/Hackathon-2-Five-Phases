@@ -42,7 +42,7 @@ jobs:
         working-directory: ./frontend
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_API_URL: 'https://huggingface.co/spaces/Razaib123/aido-todo-api'
+          NEXT_PUBLIC_API_URL: 'https://razaib123-aido-todo-api.hf.space'
         run: npm run build
 
       - name: Upload Pages artifact
