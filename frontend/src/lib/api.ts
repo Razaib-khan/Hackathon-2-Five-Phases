@@ -56,20 +56,20 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
     skipAuth: true,
   })
-  if (data.token) {
-    localStorage?.setItem('authToken', data.token)
+  if (data.access_token) {
+    localStorage?.setItem('authToken', data.access_token)
   }
   return data
 }
 
 export async function signup(email: string, password: string) {
-  const data = await apiCall<any>('/auth/signup', {
+  const data = await apiCall<any>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
     skipAuth: true,
   })
-  if (data.token) {
-    localStorage?.setItem('authToken', data.token)
+  if (data.access_token) {
+    localStorage?.setItem('authToken', data.access_token)
   }
   return data
 }

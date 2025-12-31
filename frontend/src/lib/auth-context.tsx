@@ -1,10 +1,12 @@
 /**
- * Auth Context - Stub for Phase 2
+ * Auth Context - User Authentication Management
  */
 
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import * as api from './api'
 
 export interface User {
   id: string
@@ -27,44 +29,68 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const router = useRouter()
+
+  const login = async (email: string, password: string) => {
+    setLoading(true)
+    try {
+      const response = await api.login(email, password)
+      if (response.user?.id) {
+        setUser({ id: response.user.id, email: response.user.email || email })
+      }
+      router.push('/tasks')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signup = async (email: string, password: string) => {
+    setLoading(true)
+    try {
+      const response = await api.signup(email, password)
+      if (response.user?.id) {
+        setUser({ id: response.user.id, email: response.user.email || email })
+      }
+      router.push('/tasks')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const register = async (email: string, password: string) => {
+    setLoading(true)
+    try {
+      const response = await api.register(email, password)
+      if (response.user?.id) {
+        setUser({ id: response.user.id, email: response.user.email || email })
+      }
+      router.push('/tasks')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    setLoading(true)
+    try {
+      await api.logout()
+      setUser(null)
+      router.push('/login')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const value: AuthContextType = {
-    user: null,
+    user,
     loading,
     isLoading: loading,
-    isAuthenticated: false,
-    login: async () => {
-      setLoading(true)
-      try {
-        // Stub: will be implemented in Phase 3
-      } finally {
-        setLoading(false)
-      }
-    },
-    signup: async () => {
-      setLoading(true)
-      try {
-        // Stub: will be implemented in Phase 3
-      } finally {
-        setLoading(false)
-      }
-    },
-    register: async () => {
-      setLoading(true)
-      try {
-        // Stub: will be implemented in Phase 3
-      } finally {
-        setLoading(false)
-      }
-    },
-    logout: async () => {
-      setLoading(true)
-      try {
-        // Stub: will be implemented in Phase 3
-      } finally {
-        setLoading(false)
-      }
-    },
+    isAuthenticated: user !== null,
+    login,
+    signup,
+    register,
+    logout,
   }
 
   return (
