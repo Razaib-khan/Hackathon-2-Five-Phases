@@ -1,5 +1,4 @@
-# Environment files
-.env
+# Environment files (keep .env for production defaults)
 .env.local
 .env.*.local
 
