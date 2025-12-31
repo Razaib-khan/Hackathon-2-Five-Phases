@@ -68,7 +68,8 @@ frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 allow_origins = [
     frontend_url,
     "http://localhost:3000",
-    "https://razaib-khan.github.io",  # GitHub Pages frontend
+    "https://razaib-khan.github.io",  # GitHub Pages root
+    "https://razaib-khan.github.io/Hackathon-2-Five-Phases",  # GitHub Pages subdirectory
 ]
 app.add_middleware(
     CORSMiddleware,
