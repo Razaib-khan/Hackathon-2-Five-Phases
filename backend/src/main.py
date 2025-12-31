@@ -25,18 +25,11 @@ try:
 except Exception as e:
     print(f"Warning: Could not load .env file: {e}")
 
-# Log startup configuration (safely)
-try:
-    print("🚀 AIDO Backend Starting...")
-    db_url = os.getenv('DATABASE_URL', 'NOT SET')
-    if db_url and db_url != 'NOT SET':
-        print(f"  DATABASE_URL: {db_url[:50]}...")
-    else:
-        print(f"  DATABASE_URL: NOT SET")
-    print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
-    print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
-except Exception as e:
-    print(f"Warning: Error logging configuration: {e}")
+# Log startup configuration
+print("🚀 AIDO Backend Starting...")
+print(f"  DATABASE_URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
+print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
+print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
 
 
 @asynccontextmanager
@@ -44,13 +37,12 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager - creates database tables on startup."""
     try:
         # Create database tables
-        SQLModel.metadata.create_all(bind=engine)
+        SQLModel.metadata.create_all(engine)
         print("✅ Database initialized successfully")
     except Exception as e:
-        print(f"⚠️  Database initialization warning: {str(e)}")
-        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
-        # Don't crash - let the app start so we can debug
-        print("⚠️  Continuing startup anyway (database may be unavailable)")
+        print(f"❌ Database initialization failed: {str(e)}")
+        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')}")
+        raise
     yield
     # Cleanup (if needed)
 
