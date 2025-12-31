@@ -10,14 +10,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    name: Build and Deploy to GitHub Pages
+    name: Build Static Site
 
     steps:
       - name: Checkout code
@@ -38,22 +42,28 @@ jobs:
         working-directory: ./frontend
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_API_URL: ${{ secrets.HUGGINGFACE_API_URL || 'https://huggingface.co/spaces/YOUR_USERNAME/aido-todo-api' }}
+          NEXT_PUBLIC_API_URL: 'https://huggingface.co/spaces/Razaib123/aido-todo-api'
         run: npm run build
 
-      - name: Configure Git
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./frontend/out
-          force_orphan: true
+          path: ./frontend/out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    name: Deploy to GitHub Pages
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Deployment summary
         run: |
           echo "✅ Frontend deployed to GitHub Pages"
-          echo "URL: https://razaib-khan.github.io/Hackathon-2-Five-Phases/"
+          echo "URL: ${{ steps.deployment.outputs.page_url }}"
