@@ -7,7 +7,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import * as api from './api'
-import { storeAuthTokens, clearAuthTokens } from './auth-utils'
 
 export interface User {
   id: string
@@ -37,27 +36,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true)
     try {
       const response = await api.login(email, password)
-
-      // Store tokens with expiry (assuming default values for now)
-      // In a real implementation, the API should return expiry times
-      if (response.access_token) {
-        storeAuthTokens(
-          response.access_token,
-          response.refresh_token || '',
-          response.expires_in || 3600,
-          response.refresh_expires_in || 604800
-        );
-      }
-
       if (response.user?.id) {
         setUser({ id: response.user.id, email: response.user.email || email })
       }
-
-      // Check for return URL
-      const returnUrl = localStorage.getItem('returnUrl');
-      localStorage.removeItem('returnUrl');
-
-      router.push(returnUrl || '/dashboard');
+      router.push('/tasks')
     } finally {
       setLoading(false)
     }
@@ -67,26 +49,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true)
     try {
       const response = await api.signup(email, password)
-
-      // Store tokens with expiry (assuming default values for now)
-      if (response.access_token) {
-        storeAuthTokens(
-          response.access_token,
-          response.refresh_token || '',
-          response.expires_in || 3600,
-          response.refresh_expires_in || 604800
-        );
-      }
-
       if (response.user?.id) {
         setUser({ id: response.user.id, email: response.user.email || email })
       }
-
-      // Check for return URL
-      const returnUrl = localStorage.getItem('returnUrl');
-      localStorage.removeItem('returnUrl');
-
-      router.push(returnUrl || '/dashboard');
+      router.push('/tasks')
     } finally {
       setLoading(false)
     }
@@ -96,26 +62,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true)
     try {
       const response = await api.register(email, password)
-
-      // Store tokens with expiry (assuming default values for now)
-      if (response.access_token) {
-        storeAuthTokens(
-          response.access_token,
-          response.refresh_token || '',
-          response.expires_in || 3600,
-          response.refresh_expires_in || 604800
-        );
-      }
-
       if (response.user?.id) {
         setUser({ id: response.user.id, email: response.user.email || email })
       }
-
-      // Check for return URL
-      const returnUrl = localStorage.getItem('returnUrl');
-      localStorage.removeItem('returnUrl');
-
-      router.push(returnUrl || '/dashboard');
+      router.push('/tasks')
     } finally {
       setLoading(false)
     }
@@ -124,8 +74,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     setLoading(true)
     try {
-      api.logout() // Local storage cleanup
-      clearAuthTokens()
+      await api.logout()
       setUser(null)
       router.push('/login')
     } finally {
