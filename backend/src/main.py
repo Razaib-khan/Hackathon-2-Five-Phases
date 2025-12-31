@@ -40,9 +40,10 @@ async def lifespan(app: FastAPI):
         SQLModel.metadata.create_all(engine)
         print("✅ Database initialized successfully")
     except Exception as e:
-        print(f"❌ Database initialization failed: {str(e)}")
-        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')}")
-        raise
+        print(f"⚠️  Database initialization warning: {str(e)}")
+        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
+        # Don't crash - let the app start so we can debug
+        print("⚠️  Continuing startup anyway (database may be unavailable)")
     yield
     # Cleanup (if needed)
 
