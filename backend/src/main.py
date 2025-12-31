@@ -64,9 +64,15 @@ app = FastAPI(
 )
 
 # Configure CORS for frontend access
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+allow_origins = [
+    frontend_url,
+    "http://localhost:3000",
+    "https://razaib-khan.github.io",  # GitHub Pages frontend
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
