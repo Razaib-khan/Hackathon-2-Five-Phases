@@ -20,12 +20,24 @@ from .db.session import engine
 # Load environment variables
 load_dotenv()
 
+# Log startup configuration
+print("🚀 AIDO Backend Starting...")
+print(f"  DATABASE_URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
+print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
+print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager - creates database tables on startup."""
-    # Create database tables
-    SQLModel.metadata.create_all(engine)
+    try:
+        # Create database tables
+        SQLModel.metadata.create_all(engine)
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"❌ Database initialization failed: {str(e)}")
+        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')}")
+        raise
     yield
     # Cleanup (if needed)
 
