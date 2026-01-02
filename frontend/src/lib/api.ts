@@ -92,31 +92,33 @@ export async function getTasks(userId: string, filters?: any): Promise<{ tasks: 
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/tasks?user_id=${userId}${queryString ? `&${queryString}` : ''}`
+  const endpoint = `/api/users/${userId}/tasks${queryString ? `?${queryString}` : ''}`
   return apiCall<{ tasks: any[]; total: number }>(endpoint, { method: 'GET' })
 }
 
 export async function createTask(userId: string, data?: any): Promise<any> {
-  return apiCall<any>('/tasks', {
+  return apiCall<any>(`/api/users/${userId}/tasks`, {
     method: 'POST',
-    body: JSON.stringify({ ...(data || {}), user_id: userId }),
+    body: JSON.stringify(data || {}),
   })
 }
 
 export async function updateTask(userId: string, taskId: string, data?: any): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}`, {
+  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}`, {
     method: 'PUT',
-    body: JSON.stringify({ ...(data || {}), user_id: userId }),
+    body: JSON.stringify(data || {}),
   })
 }
 
 export async function toggleTaskComplete(userId: string, taskId: string, completed?: boolean): Promise<any> {
-  const response = await apiCall<any>(`/tasks/${taskId}`, { method: 'GET' })
-  return updateTask(userId, taskId, { completed: !response.completed })
+  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}/complete`, {
+    method: 'PATCH',
+    body: JSON.stringify({ completed: completed ?? true }),
+  })
 }
 
 export async function deleteTask(userId: string, taskId: string): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}`, { method: 'DELETE' })
+  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' })
 }
 
 export async function checkHealth() {
