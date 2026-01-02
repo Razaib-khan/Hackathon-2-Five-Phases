@@ -1,0 +1,69 @@
+# Frontend (not needed for backend)
+frontend/
+
+# Documentation
+*.md
+CONNECTIVITY_FIX_REPORT.md
+FRONTEND_BACKEND_DIAGNOSIS.md
+FIX_SUMMARY.md
+TEST_AND_DEPLOY_CHECKLIST.md
+ISSUES_AND_FIXES.txt
+DEPLOYMENT_STATUS.md
+HF_SPACES_SETUP_GUIDE.md
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Misc
+*.log
+.cache/
+node_modules/
