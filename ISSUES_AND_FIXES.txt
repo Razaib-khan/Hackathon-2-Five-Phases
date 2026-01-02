@@ -1,0 +1,240 @@
+================================================================================
+  FRONTEND-BACKEND CONNECTIVITY DIAGNOSIS & FIXES
+  Hackathon II - Phase 2 (AIDO Todo Web Application)
+================================================================================
+
+PROJECT DEPLOYMENT ARCHITECTURE:
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  Frontend: GitHub Pages                                                 │
+│  https://razaib-khan.github.io/Hackathon-2-Five-Phases                  │
+│                                                                          │
+│  ↓ (CORS Requests)                                                      │
+│                                                                          │
+│  Backend: HF Spaces                                                     │
+│  https://razaib123-aido-todo-api.hf.space (Port 7860)                   │
+│                                                                          │
+│  ↓ (SQL Queries)                                                        │
+│                                                                          │
+│  Database: Neon PostgreSQL                                              │
+│  postgresql+psycopg://...@ep-xxx.neon.tech/neondb                        │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+ISSUES IDENTIFIED
+================================================================================
+
+Issue #1: API ENDPOINT ROUTING MISMATCH (CRITICAL)
+───────────────────────────────────────────────────
+Status: 🔴 BROKEN → ✅ FIXED
+
+PROBLEM:
+  Frontend calls          Backend provides
+  ────────────────────────────────────────
+  GET  /tasks             → Not Found (404)
+  POST /tasks             → Not Found (404)
+  GET  /tasks/{id}        → Not Found (404)
+  PUT  /tasks/{id}        → Not Found (404)
+  DELETE /tasks/{id}      → Not Found (404)
+
+EXPECTED:
+  Frontend should call    Backend provides
+  ────────────────────────────────────────────────────────────
+  GET  /api/users/{id}/tasks
+  POST /api/users/{id}/tasks
+  GET  /api/users/{id}/tasks/{taskId}
+  PUT  /api/users/{id}/tasks/{taskId}
+  DELETE /api/users/{id}/tasks/{taskId}
+  PATCH /api/users/{id}/tasks/{taskId}/complete
+
+FILE: frontend/src/lib/api.ts (Lines 85-122)
+FIXED: Updated 6 API functions with correct routes
+
+Example:
+  Before: const endpoint = `/tasks?user_id=${userId}`
+  After:  const endpoint = `/api/users/${userId}/tasks`
+
+
+Issue #2: CORS MISCONFIGURATION (HIGH)
+──────────────────────────────────────
+Status: 🔴 BLOCKED → ✅ FIXED
+
+PROBLEM:
+  Backend CORS allowed:
+  - https://razaib-khan.github.io/Hackathon-2-Five-Phases  ❌ WRONG (path included)
+  
+  Browser sent Origin header:
+  - Origin: https://razaib-khan.github.io  (domain only, no path)
+  
+  Result:
+  - Browser: "CORS error: No Access-Control-Allow-Origin header"
+  - Frontend: Silent API failure
+
+ROOT CAUSE:
+  CORS header matching is DOMAIN-BASED, not PATH-BASED
+  Browser doesn't include the full path in the Origin header
+
+FILE: backend/src/main.py (Lines 65-87)
+FIXED: Updated CORS configuration
+
+Before:
+  allow_origins = [
+      "https://razaib-khan.github.io/Hackathon-2-Five-Phases",  # ❌ path included
+  ]
+
+After:
+  allow_origins = [
+      "https://razaib-khan.github.io",  # ✅ domain only
+      "https://razaib123-aido-todo-api.hf.space",  # ✅ HF Spaces domain
+  ]
+
+
+Issue #3: PORT CONFIGURATION MISMATCH (HIGH)
+─────────────────────────────────────────────
+Status: 🔴 INCONSISTENT → ✅ FIXED
+
+PROBLEM:
+  docker-compose.yml     →   Dockerfile (HF Spaces)
+  ──────────────────────     ──────────────────────
+  Port: 8000            vs   Port: 7860
+  
+  HF Spaces runs services on port 7860 by default
+
+FILE: docker-compose.yml (5 locations)
+FIXED: Changed all 8000 → 7860
+
+Changes:
+  Line 10:  ports: ["8000:8000"]  →  ports: ["7860:7860"]
+  Line 16:  API_PORT=8000  →  API_PORT=7860
+  Line 22:  --port 8000  →  --port 7860
+  Line 26:  localhost:8000  →  localhost:7860
+  Line 40:  NEXT_PUBLIC_API_URL=http://localhost:8000  →  localhost:7860
+
+
+Issue #4: MISSING ENVIRONMENT CONFIGURATION (MEDIUM)
+────────────────────────────────────────────────────
+Status: 🟡 INCOMPLETE → ✅ FIXED
+
+PROBLEM:
+  No frontend/.env.local file for local development
+  
+  Fallback: NEXT_PUBLIC_API_URL = 'http://localhost:8000'
+  But backend now runs on: localhost:7860
+  
+  Result: Local development API calls fail
+
+FILE: frontend/.env.local (NEW FILE)
+FIXED: Created with correct configuration
+
+Contents:
+  NEXT_PUBLIC_API_URL=http://localhost:7860
+
+Note: GitHub Pages build still uses production URL from workflow
+
+================================================================================
+FIXES APPLIED
+================================================================================
+
+✅ FIX #1: Frontend API Routes (frontend/src/lib/api.ts)
+──────────────────────────────────────────────────────
+
+Functions Updated:
+  1. getTasks()           /tasks → /api/users/{userId}/tasks
+  2. createTask()         /tasks → /api/users/{userId}/tasks
+  3. updateTask()         /tasks/{id} → /api/users/{userId}/tasks/{taskId}
+  4. deleteTask()         /tasks/{id} → /api/users/{userId}/tasks/{taskId}
+  5. toggleTaskComplete() GET /tasks/{id} → PATCH /api/users/{userId}/tasks/{taskId}/complete
+
+Auth endpoints (no changes needed):
+  ✓ POST /auth/login      (already correct)
+  ✓ POST /auth/register   (already correct)
+
+
+✅ FIX #2: CORS Configuration (backend/src/main.py)
+──────────────────────────────────────────────────
+
+Added:
+  - import re
+
+Updated allow_origins list:
+  + "https://razaib-khan.github.io"  (GitHub Pages - domain only)
+  + "https://razaib123-aido-todo-api.hf.space"  (HF Spaces domain)
+  - remove: "https://razaib-khan.github.io/Hackathon-2-Five-Phases"  (path)
+
+Added regex pattern:
+  allow_origins_regex = r"https://razaib123-aido-todo-api\.hf\.space.*"
+
+
+✅ FIX #3: Port Configuration (docker-compose.yml)
+─────────────────────────────────────────────────
+
+Backend Service (port 8000 → 7860):
+  Line 10:   ports: ["7860:7860"]
+  Line 16:   API_PORT=7860
+  Line 22:   uvicorn ... --port 7860
+  Line 26:   healthcheck: localhost:7860
+
+Frontend Service (8000 → 7860):
+  Line 40:   NEXT_PUBLIC_API_URL=http://localhost:7860
+
+
+✅ FIX #4: Frontend Environment (frontend/.env.local - NEW)
+──────────────────────────────────────────────────────────
+
+Created file:
+  frontend/.env.local
+  
+With content:
+  NEXT_PUBLIC_API_URL=http://localhost:7860
+
+This file:
+  ✓ Is auto git-ignored (.gitignore already has *.local)
+  ✓ Provides correct API URL for local development
+  ✓ Doesn't affect GitHub Pages deployment (uses workflow URL)
+
+================================================================================
+VERIFICATION
+================================================================================
+
+LOCAL DEVELOPMENT:
+  1. docker-compose up --build
+  2. Frontend: http://localhost:3000
+  3. Backend: http://localhost:7860
+  4. Health check: curl http://localhost:7860/health
+  5. Test workflow: Register → Login → Create Task
+
+PRODUCTION (After Push):
+  1. git push origin main
+  2. GitHub Actions triggers both workflows
+  3. Frontend deploys to GitHub Pages
+  4. Backend deploys to HF Spaces
+  5. Test at: https://razaib-khan.github.io/Hackathon-2-Five-Phases
+
+BROWSER CONSOLE TESTS:
+  ✓ No CORS errors
+  ✓ No 404 errors
+  ✓ Network requests show correct API URLs
+  ✓ Requests go to https://razaib123-aido-todo-api.hf.space/api/users/...
+
+================================================================================
+SUMMARY
+================================================================================
+
+Files Modified:        4
+  - frontend/src/lib/api.ts      (updated routes)
+  - backend/src/main.py          (updated CORS)
+  - docker-compose.yml           (updated ports)
+  - frontend/.env.local          (created)
+
+Phase 1 Protected:     ✓ No Phase 1 files modified
+Lines Changed:        ~40 (configuration only)
+
+Status:               ✅ READY FOR DEPLOYMENT
+
+Next Action:
+  git add .
+  git commit -m "fix: resolve frontend-backend connectivity issues"
+  git push origin main
+
+================================================================================

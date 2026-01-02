@@ -64,16 +64,24 @@ app = FastAPI(
 )
 
 # Configure CORS for frontend access
+# IMPORTANT: CORS origins are domain-based, NOT including path components
+# Path routing happens client-side in browsers
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 allow_origins = [
     frontend_url,
     "http://localhost:3000",
-    "https://razaib-khan.github.io",  # GitHub Pages root
-    "https://razaib-khan.github.io/Hackathon-2-Five-Phases",  # GitHub Pages subdirectory
+    "http://localhost:8000",
+    "https://razaib-khan.github.io",  # GitHub Pages (domain only, no path)
+    "https://razaib123-aido-todo-api.hf.space",  # HF Spaces backend (for testing)
 ]
+
+# Allow all origins from HF Spaces domain pattern
+allow_origins_regex = r"https://razaib123-aido-todo-api\.hf\.space.*"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    allow_origin_regex=allow_origins_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
