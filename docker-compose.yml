@@ -7,23 +7,23 @@ services:
       dockerfile: Dockerfile
     container_name: aido-backend
     ports:
-      - "8000:8000"
+      - "7860:7860"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - API_HOST=0.0.0.0
-      - API_PORT=8000
+      - API_PORT=7860
       - FRONTEND_URL=http://localhost:3000
       - ENVIRONMENT=development
     depends_on:
       - db
     volumes:
       - ./backend/src:/app/src
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.main:app --host 0.0.0.0 --port 7860 --reload
     networks:
       - aido-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:7860/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -37,7 +37,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:7860
     depends_on:
       - backend
     volumes:
