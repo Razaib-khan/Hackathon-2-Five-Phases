@@ -38,7 +38,7 @@ engine = create_engine(
     max_overflow=10,  # Additional connections when pool exhausted
     pool_recycle=3600,  # Recycle connections after 1 hour
     connect_args={
-        "timeout": 10,  # Connection timeout in seconds
+        "connect_timeout": 10,  # Connection timeout in seconds (psycopg3)
         "application_name": "aido-todo",  # Identify app in Neon logs
     },
 )
