@@ -1,0 +1,4 @@
+title: AIDO Todo API
+description: Phase 2 Web API with JWT Authentication - FastAPI Backend
+sdk: docker
+app_file: Dockerfile
