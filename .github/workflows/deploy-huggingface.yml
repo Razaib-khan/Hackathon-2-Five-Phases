@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'backend/**'
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - 'README.md'
       - '.github/workflows/deploy-huggingface.yml'
   workflow_dispatch:
 
