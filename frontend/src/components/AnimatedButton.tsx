@@ -29,6 +29,9 @@ interface AnimatedButtonProps extends MotionButtonProps {
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
   feedback?: 'success' | 'error' | null
+  onDrag?: (event: React.DragEvent<HTMLButtonElement>) => void
+  onDragStart?: (event: React.DragEvent<HTMLButtonElement>) => void
+  onDragEnd?: (event: React.DragEvent<HTMLButtonElement>) => void
 }
 
 export function AnimatedButton({
