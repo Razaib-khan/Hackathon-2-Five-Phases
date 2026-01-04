@@ -19,6 +19,8 @@ from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from .task import Task
+    from .tag import Tag
+    from .user_settings import UserSettings
 
 
 class User(SQLModel, table=True):
@@ -35,12 +37,16 @@ class User(SQLModel, table=True):
         sa_column_kwargs={"onupdate": datetime.utcnow},
     )
 
-    # One-to-many relationship: User has many Tasks
-    # cascade delete handled via foreign key in Task model
+    # Relationships
     tasks: List["Task"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    tags: List["Tag"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    settings: Optional["UserSettings"] = Relationship(back_populates="user")
 
 
 class UserPublic(SQLModel):

@@ -1,6 +1,11 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/lib/auth-context'
+import { ThemeProvider } from '@/contexts/ThemeContext'
+import { SettingsProvider } from '@/contexts/SettingsContext'
+import { ViewProvider } from '@/contexts/ViewContext'
+import { FilterProvider } from '@/contexts/FilterContext'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'AIDO Todo',
@@ -15,9 +20,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-gray-50">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SettingsProvider>
+              <ViewProvider>
+                <FilterProvider>
+                  {children}
+                  <Toaster position="top-right" richColors />
+                </FilterProvider>
+              </ViewProvider>
+            </SettingsProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

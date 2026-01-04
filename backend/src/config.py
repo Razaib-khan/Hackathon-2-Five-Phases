@@ -11,6 +11,9 @@ Environment variables:
 - JWT_EXPIRATION_HOURS: Token expiration time (default: 1 hour)
 - CORS_ORIGINS: Comma-separated list of allowed origins
 - DEBUG: Enable debug mode (default: False)
+- REDIS_URL: Redis connection string for rate limiting (optional)
+- RATE_LIMIT_REQUESTS: Maximum requests per window (default: 100)
+- RATE_LIMIT_WINDOW: Rate limit window in seconds (default: 60)
 """
 
 import os
@@ -47,6 +50,13 @@ class Settings:
 
         # Debug mode
         self.debug: bool = os.getenv("DEBUG", "false").lower() == "true"
+
+        # Redis Configuration (optional, for rate limiting)
+        self.REDIS_URL: str = os.getenv("REDIS_URL", "")
+
+        # Rate Limiting Configuration
+        self.RATE_LIMIT_REQUESTS: int = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
+        self.RATE_LIMIT_WINDOW: int = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 
         # API Settings
         self.api_title: str = "AIDO Todo API"
