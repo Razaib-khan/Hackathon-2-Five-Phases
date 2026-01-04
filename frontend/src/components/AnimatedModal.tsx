@@ -9,7 +9,7 @@
 
 'use client'
 
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence, Variants } from 'motion/react'
 import { slideUpVariants, fadeVariants } from '@/lib/animations'
 import { ReactNode, useEffect } from 'react'
 import { X } from 'lucide-react'
@@ -150,7 +150,7 @@ export function AnimatedDrawer({
     }
   }, [isOpen])
 
-  const slideVariants = {
+  const slideVariants: Variants = {
     hidden: { x: position === 'right' ? '100%' : '-100%', opacity: 0 },
     visible: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
     exit: { x: position === 'right' ? '100%' : '-100%', opacity: 0, transition: { duration: 0.2 } },

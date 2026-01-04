@@ -32,6 +32,8 @@ interface FilterContextType {
   setStatus: (statuses: string[]) => void;
   setTagIds: (tagIds: string[]) => void;
   setDueDateRange: (start: Date | null, end: Date | null) => void;
+  setDueDateStart: (start: Date | null) => void;
+  setDueDateEnd: (end: Date | null) => void;
   setSearch: (search: string) => void;
   clearFilters: () => void;
 }
@@ -70,6 +72,20 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const setDueDateStart = (start: Date | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      due_date_start: start,
+    }));
+  };
+
+  const setDueDateEnd = (end: Date | null) => {
+    setFilters((prev) => ({
+      ...prev,
+      due_date_end: end,
+    }));
+  };
+
   const setSearch = (search: string) => {
     // Enforce 200 char limit (FR-051)
     const trimmed = search.slice(0, 200);
@@ -88,6 +104,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setStatus,
         setTagIds,
         setDueDateRange,
+        setDueDateStart,
+        setDueDateEnd,
         setSearch,
         clearFilters,
       }}
