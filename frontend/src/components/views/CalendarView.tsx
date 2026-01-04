@@ -268,7 +268,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(task.id, !task.completed)
+                    toggleComplete(userId, task.id)
                   }}
                   className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
@@ -326,7 +326,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(task.id, !task.completed)
+                    toggleComplete(userId, task.id)
                   }}
                   className="h-4 w-4 rounded border-gray-300"
                 />
