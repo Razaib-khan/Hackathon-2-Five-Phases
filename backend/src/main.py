@@ -86,6 +86,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting middleware (if Redis is configured)
+try:
+    from .middleware.rate_limit import RateLimitMiddleware
+
+    app.middleware("http")(RateLimitMiddleware(app))
+    print("✓ Rate limiting middleware enabled")
+except Exception as e:
+    print(f"Warning: Rate limiting disabled: {e}")
+
 
 # Health check endpoint
 @app.get("/health", tags=["Health"])
@@ -121,9 +130,21 @@ async def health_check():
 # Import and include routers
 from .api.auth import router as auth_router
 from .api.tasks import router as tasks_router
+from .routers.tags import router as tags_router
+from .routers.subtasks import router as subtasks_router
+from .routers.settings import router as settings_router
+from .routers.analytics import router as analytics_router
+from .routers.export import router as export_router
+from .routers.search import router as search_router
 
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
+app.include_router(tags_router, prefix="/api")
+app.include_router(subtasks_router, prefix="/api")
+app.include_router(settings_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
+app.include_router(export_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 
 
 # Development entry point
