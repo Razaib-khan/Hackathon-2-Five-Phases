@@ -15,7 +15,7 @@ import { buttonAnimations, bounceVariants, shakeVariants } from '@/lib/animation
 import { ReactNode, ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface AnimatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface AnimatedButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
   children: ReactNode
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
