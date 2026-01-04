@@ -84,7 +84,7 @@ function SortableTaskCard({
     >
       <TaskCard
         task={task}
-        onToggleComplete={onToggleComplete}
+        onToggleComplete={(taskId) => onToggleComplete(taskId, task.completed)}
         onClick={onClick}
         compact={false}
       />
@@ -155,6 +155,10 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
     if (onTaskClick) {
       onTaskClick(taskId)
     }
+  }
+
+  const handleToggleComplete = (taskId: string, completed: boolean) => {
+    toggleComplete(userId, taskId)
   }
 
   if (error) {
@@ -234,7 +238,7 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
                         <SortableTaskCard
                           key={task.id}
                           task={task}
-                          onToggleComplete={toggleComplete}
+                          onToggleComplete={handleToggleComplete}
                           onClick={handleTaskClick}
                         />
                       ))
@@ -252,7 +256,7 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
             <div className="rotate-3 opacity-90">
               <TaskCard
                 task={activeTask}
-                onToggleComplete={toggleComplete}
+                onToggleComplete={handleToggleComplete}
                 onClick={handleTaskClick}
                 compact={false}
               />

@@ -133,6 +133,10 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
     }
   }
 
+  const handleToggleComplete = (taskId: string, completed: boolean) => {
+    toggleComplete(userId, taskId)
+  }
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -225,7 +229,7 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
                   <TaskCard
                     key={task.id}
                     task={task}
-                    onToggleComplete={toggleComplete}
+                    onToggleComplete={handleToggleComplete}
                     onClick={handleTaskClick}
                   />
                 ))}
