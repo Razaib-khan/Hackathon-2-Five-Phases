@@ -15,7 +15,15 @@ import { buttonAnimations, bounceVariants, shakeVariants } from '@/lib/animation
 import { ReactNode, ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface AnimatedButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
+// Define a type that excludes motion-incompatible properties
+type MotionButtonProps = Pick<ButtonHTMLAttributes<HTMLButtonElement>,
+  Exclude<
+    keyof ButtonHTMLAttributes<HTMLButtonElement>,
+    'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'onPan' | 'onPanStart' | 'onPanEnd'
+  >
+>;
+
+interface AnimatedButtonProps extends MotionButtonProps {
   children: ReactNode
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
@@ -80,7 +88,7 @@ export function AnimatedButton({
   )
 }
 
-interface AnimatedIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface AnimatedIconButtonProps extends MotionButtonProps {
   children: ReactNode
   variant?: 'default' | 'danger'
   size?: 'sm' | 'md' | 'lg'
