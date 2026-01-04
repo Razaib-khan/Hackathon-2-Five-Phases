@@ -15,12 +15,15 @@ import { buttonAnimations, bounceVariants, shakeVariants } from '@/lib/animation
 import { ReactNode, ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface AnimatedButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'> {
+interface AnimatedButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onAnimationEnd'> {
   children: ReactNode
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
   feedback?: 'success' | 'error' | null
+  onDrag?: (event: React.DragEvent<HTMLButtonElement>) => void
+  onDragStart?: (event: React.DragEvent<HTMLButtonElement>) => void
+  onDragEnd?: (event: React.DragEvent<HTMLButtonElement>) => void
 }
 
 export function AnimatedButton({
