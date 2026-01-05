@@ -1,0 +1,465 @@
+openapi: 3.0.0
+info:
+  title: Task Creation and UI Enhancement API
+  description: API contracts for task creation, tag management, export, analytics, and UI enhancements
+  version: 1.0.0
+
+paths:
+  /api/tasks:
+    post:
+      summary: Create a new task
+      description: Creates a new task with the provided details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/users/{userId}/tasks:
+    get:
+      summary: Get tasks for a user
+      description: Retrieve all tasks for the specified user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tag_ids
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: number
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/tags:
+    get:
+      summary: Get user tags
+      description: Retrieve all tags for the authenticated user
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+                  total:
+                    type: number
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+    post:
+      summary: Create a new tag
+      description: Creates a new tag for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreateRequest'
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/analytics/dashboard:
+    get:
+      summary: Get dashboard analytics
+      description: Retrieve analytics data for the user dashboard
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [week, month, year, all]
+            default: all
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardAnalytics'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/analytics/streak:
+    get:
+      summary: Get completion streak
+      description: Retrieve streak data for the user
+      responses:
+        '200':
+          description: Streak data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreakData'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/export:
+    get:
+      summary: Export user data
+      description: Export tasks in the requested format
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [json, csv]
+        - name: include_completed
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Data exported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+  /api/user/preferences:
+    get:
+      summary: Get user preferences
+      description: Retrieve user preferences including theme settings
+      responses:
+        '200':
+          description: Preferences retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+    patch:
+      summary: Update user preferences
+      description: Update user preferences including theme settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdateRequest'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+        due_date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+        user_id:
+          type: string
+        estimated_time:
+          type: number
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        reminder_time:
+          type: string
+          format: date-time
+
+    TaskCreateRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        priority:
+          type: string
+          enum: [high, medium, low]
+          default: medium
+        due_date:
+          type: string
+          format: date-time
+        estimated_time:
+          type: number
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        reminder_time:
+          type: string
+          format: date-time
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TagCreateRequest:
+      type: object
+      required:
+        - name
+        - color
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        color:
+          type: string
+          pattern: "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+
+    DashboardAnalytics:
+      type: object
+      properties:
+        total_tasks:
+          type: number
+        completed_tasks:
+          type: number
+        overdue_tasks:
+          type: number
+        due_today:
+          type: number
+        priority_distribution:
+          type: object
+          properties:
+            high:
+              type: number
+            medium:
+              type: number
+            low:
+              type: number
+            none:
+              type: number
+        completion_trend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              completed:
+                type: number
+              created:
+                type: number
+        category_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              tag_name:
+                type: string
+              tag_color:
+                type: string
+              task_count:
+                type: number
+              completed_count:
+                type: number
+        total_time_spent:
+          type: number
+        average_completion_time:
+          type: number
+
+    StreakData:
+      type: object
+      properties:
+        current_streak:
+          type: number
+        longest_streak:
+          type: number
+        last_completion_date:
+          type: string
+          format: date-time
+
+    UserPreferences:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        theme:
+          type: string
+          enum: [light, dark, system]
+        default_view:
+          type: string
+          enum: [list, kanban, calendar, matrix]
+        date_format:
+          type: string
+        week_start_day:
+          type: number
+        animations_enabled:
+          type: boolean
+        pomodoro_work_minutes:
+          type: number
+        pomodoro_break_minutes:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserPreferencesUpdateRequest:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, system]
+        default_view:
+          type: string
+          enum: [list, kanban, calendar, matrix]
+        date_format:
+          type: string
+        week_start_day:
+          type: number
+        animations_enabled:
+          type: boolean
+        pomodoro_work_minutes:
+          type: number
+        pomodoro_break_minutes:
+          type: number

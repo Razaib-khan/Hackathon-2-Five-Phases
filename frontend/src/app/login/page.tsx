@@ -13,6 +13,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import AppLogo from '@/components/AppLogo';
 
 export default function LoginPage() {
   const { login, isLoading: authLoading } = useAuth();
@@ -46,10 +47,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-center text-3xl font-bold text-gray-900">
-            AIDO
-          </h1>
+        <div className="text-center">
+          <div className="mx-auto mb-4">
+            <AppLogo size="auth" />
+          </div>
           <h2 className="mt-2 text-center text-xl text-gray-600">
             Sign in to your account
           </h2>

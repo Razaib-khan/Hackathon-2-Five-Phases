@@ -1,3 +1,7 @@
+import { TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions, TaskListResponse } from '@/models/task';
+import { TagCreateRequest, TagUpdateRequest, TagListResponse } from '@/models/tag';
+import { UserPreferences, UserPreferencesUpdateRequest } from '@/models/user-preferences';
+
 /**
  * API Client Utilities
  */
@@ -44,7 +48,8 @@ export async function apiCall<T>(
   })
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`)
+    const errorText = await response.text().catch(() => `API error: ${response.status}`);
+    throw new Error(`API error: ${response.status} - ${errorText}`);
   }
 
   return response.json()
@@ -82,7 +87,8 @@ export async function logout() {
   localStorage?.removeItem('authToken')
 }
 
-export async function getTasks(userId: string, filters?: any): Promise<{ tasks: any[]; total: number }> {
+// Task API functions
+export async function getTasks(userId: string, filters?: TaskFilterOptions): Promise<TaskListResponse> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -93,32 +99,119 @@ export async function getTasks(userId: string, filters?: any): Promise<{ tasks: 
   }
   const queryString = queryParams.toString()
   const endpoint = `/api/users/${userId}/tasks${queryString ? `?${queryString}` : ''}`
-  return apiCall<{ tasks: any[]; total: number }>(endpoint, { method: 'GET' })
+  return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
 }
 
-export async function createTask(userId: string, data?: any): Promise<any> {
-  return apiCall<any>(`/api/users/${userId}/tasks`, {
+export async function createTask(data: TaskCreateRequest): Promise<any> {
+  return apiCall<any>('/api/tasks', {
     method: 'POST',
-    body: JSON.stringify(data || {}),
+    body: JSON.stringify(data),
   })
 }
 
-export async function updateTask(userId: string, taskId: string, data?: any): Promise<any> {
-  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}`, {
+export async function updateTask(taskId: string, data: TaskUpdateRequest): Promise<any> {
+  return apiCall<any>(`/api/tasks/${taskId}`, {
     method: 'PUT',
-    body: JSON.stringify(data || {}),
+    body: JSON.stringify(data),
   })
 }
 
-export async function toggleTaskComplete(userId: string, taskId: string, completed?: boolean): Promise<any> {
-  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}/complete`, {
+export async function toggleTaskComplete(taskId: string, completed?: boolean): Promise<any> {
+  return apiCall<any>(`/api/tasks/${taskId}/complete`, {
     method: 'PATCH',
     body: JSON.stringify({ completed: completed ?? true }),
   })
 }
 
-export async function deleteTask(userId: string, taskId: string): Promise<any> {
-  return apiCall<any>(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' })
+export async function deleteTask(taskId: string): Promise<any> {
+  return apiCall<any>(`/api/tasks/${taskId}`, { method: 'DELETE' })
+}
+
+// Tag API functions
+export async function getTags(userId: string, filters?: any): Promise<TagListResponse> {
+  const queryParams = new URLSearchParams()
+  if (filters) {
+    Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value))
+      }
+    })
+  }
+  const queryString = queryParams.toString()
+  const endpoint = `/api/users/${userId}/tags${queryString ? `?${queryString}` : ''}`
+  return apiCall<TagListResponse>(endpoint, { method: 'GET' })
+}
+
+export async function createTag(data: TagCreateRequest): Promise<any> {
+  return apiCall<any>('/api/tags', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateTag(tagId: string, data: TagUpdateRequest): Promise<any> {
+  return apiCall<any>(`/api/tags/${tagId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteTag(tagId: string): Promise<void> {
+  return apiCall<void>(`/api/tags/${tagId}`, { method: 'DELETE' })
+}
+
+// Export API functions
+export async function exportTasks(format: 'json' | 'csv', params?: { include_completed?: boolean; start_date?: string; end_date?: string }): Promise<any> {
+  const url = new URL('/api/export', `${API_URL}`);
+  url.searchParams.append('format', format);
+
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  return apiCall<any>(url.pathname + url.search, { method: 'GET' });
+}
+
+// Analytics API functions
+export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<any> {
+  const url = new URL('/api/analytics/dashboard', `${API_URL}`);
+  if (period) {
+    url.searchParams.append('period', period);
+  }
+
+  return apiCall<any>(url.pathname + url.search, { method: 'GET' });
+}
+
+export async function getStreakData(): Promise<any> {
+  return apiCall<any>('/api/analytics/streak', { method: 'GET' });
+}
+
+// User Preferences API functions
+export async function getUserPreferences(): Promise<UserPreferences> {
+  return apiCall<UserPreferences>('/api/user/preferences', { method: 'GET' });
+}
+
+export async function updateUserPreferences(preferences: UserPreferencesUpdateRequest): Promise<UserPreferences> {
+  return apiCall<UserPreferences>('/api/user/preferences', {
+    method: 'PATCH',
+    body: JSON.stringify(preferences)
+  });
+}
+
+// User Settings API functions
+export async function getUserSettings(): Promise<any> {
+  return apiCall<any>('/api/user/settings', { method: 'GET' });
+}
+
+export async function updateUserSettings(data: any): Promise<any> {
+  return apiCall<any>('/api/user/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  });
 }
 
 export async function checkHealth() {
@@ -143,214 +236,3 @@ export async function getStoredUser() {
 }
 
 export { getToken }
-
-// ============================================================================
-// Tags API (T070)
-// ============================================================================
-
-export interface Tag {
-  id: string
-  user_id: string
-  name: string
-  color: string
-  created_at: string
-}
-
-export interface TagCreateData {
-  name: string
-  color?: string
-}
-
-export interface TagUpdateData {
-  name?: string
-  color?: string
-}
-
-export async function getTags(): Promise<{ tags: Tag[]; total: number }> {
-  return apiCall<{ tags: Tag[]; total: number }>('/api/tags', { method: 'GET' })
-}
-
-export async function createTag(data: TagCreateData): Promise<Tag> {
-  return apiCall<Tag>('/api/tags', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateTag(tagId: string, data: TagUpdateData): Promise<Tag> {
-  return apiCall<Tag>(`/api/tags/${tagId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteTag(tagId: string): Promise<void> {
-  return apiCall<void>(`/api/tags/${tagId}`, { method: 'DELETE' })
-}
-
-// ============================================================================
-// Subtasks API (T071)
-// ============================================================================
-
-export interface Subtask {
-  id: string
-  task_id: string
-  title: string
-  completed: boolean
-  order_index: number
-  created_at: string
-  updated_at: string
-}
-
-export interface SubtaskCreateData {
-  title: string
-  order_index?: number
-}
-
-export interface SubtaskUpdateData {
-  title?: string
-  completed?: boolean
-  order_index?: number
-}
-
-export async function createSubtask(
-  taskId: string,
-  data: SubtaskCreateData
-): Promise<Subtask> {
-  return apiCall<Subtask>(`/api/tasks/${taskId}/subtasks`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateSubtask(
-  subtaskId: string,
-  data: SubtaskUpdateData
-): Promise<Subtask> {
-  return apiCall<Subtask>(`/api/subtasks/${subtaskId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteSubtask(subtaskId: string): Promise<void> {
-  return apiCall<void>(`/api/subtasks/${subtaskId}`, { method: 'DELETE' })
-}
-
-// ============================================================================
-// Analytics API (T072)
-// ============================================================================
-
-export interface PriorityDistribution {
-  high: number
-  medium: number
-  low: number
-  none: number
-}
-
-export interface CompletionTrendDataPoint {
-  date: string
-  completed: number
-  created: number
-}
-
-export interface CategoryBreakdown {
-  tag_name: string
-  tag_color: string
-  task_count: number
-  completed_count: number
-}
-
-export interface DashboardAnalytics {
-  total_tasks: number
-  completed_tasks: number
-  overdue_tasks: number
-  due_today: number
-  priority_distribution: PriorityDistribution
-  completion_trend: CompletionTrendDataPoint[]
-  category_breakdown: CategoryBreakdown[]
-  total_time_spent: number
-  average_completion_time: number
-}
-
-export interface StreakData {
-  current_streak: number
-  longest_streak: number
-  last_completion_date: string | null
-}
-
-export async function getDashboardAnalytics(
-  period: 'week' | 'month' | 'year' | 'all' = 'all'
-): Promise<DashboardAnalytics> {
-  return apiCall<DashboardAnalytics>(
-    `/api/analytics/dashboard?period=${period}`,
-    { method: 'GET' }
-  )
-}
-
-export async function getStreak(): Promise<StreakData> {
-  return apiCall<StreakData>('/api/analytics/streak', { method: 'GET' })
-}
-
-// ============================================================================
-// Settings API (T073)
-// ============================================================================
-
-export interface UserSettings {
-  id: string
-  user_id: string
-  theme: 'light' | 'dark' | 'system'
-  default_view: 'list' | 'kanban' | 'calendar' | 'matrix'
-  date_format: string
-  week_start_day: number
-  animations_enabled: boolean
-  pomodoro_work_minutes: number
-  pomodoro_break_minutes: number
-  created_at: string
-  updated_at: string
-}
-
-export interface UserSettingsUpdateData {
-  theme?: 'light' | 'dark' | 'system'
-  default_view?: 'list' | 'kanban' | 'calendar' | 'matrix'
-  date_format?: string
-  week_start_day?: number
-  animations_enabled?: boolean
-  pomodoro_work_minutes?: number
-  pomodoro_break_minutes?: number
-}
-
-export async function getSettings(): Promise<UserSettings> {
-  return apiCall<UserSettings>('/api/user/settings', { method: 'GET' })
-}
-
-export async function updateSettings(
-  data: UserSettingsUpdateData
-): Promise<UserSettings> {
-  return apiCall<UserSettings>('/api/user/settings', {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
-}
-
-// ============================================================================
-// Export API (T074)
-// ============================================================================
-
-export async function exportData(format: 'json' | 'csv'): Promise<Blob> {
-  const response = await fetch(
-    `${API_URL}/api/export?format=${format}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-      },
-    }
-  )
-
-  if (!response.ok) {
-    throw new Error(`Export failed: ${response.status}`)
-  }
-
-  return response.blob()
-}
