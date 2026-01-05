@@ -133,6 +133,10 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
     }
   }
 
+  const handleToggleCompleteForTaskCard = (taskId: string) => {
+    toggleComplete(userId, taskId)
+  }
+
   const handleToggleComplete = (taskId: string, completed: boolean) => {
     toggleComplete(userId, taskId)
   }
@@ -229,7 +233,7 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
                   <TaskCard
                     key={task.id}
                     task={task}
-                    onToggleComplete={handleToggleComplete}
+                    onToggleComplete={handleToggleCompleteForTaskCard}
                     onClick={handleTaskClick}
                   />
                 ))}

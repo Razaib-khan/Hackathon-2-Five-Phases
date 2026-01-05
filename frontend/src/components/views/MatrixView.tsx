@@ -132,6 +132,10 @@ export function MatrixView({ userId, onTaskClick }: MatrixViewProps) {
     }
   }
 
+  const handleToggleCompleteForTaskCard = (taskId: string) => {
+    toggleComplete(userId, taskId)
+  }
+
   const handleToggleComplete = (taskId: string, completed: boolean) => {
     toggleComplete(userId, taskId)
   }
@@ -236,7 +240,7 @@ export function MatrixView({ userId, onTaskClick }: MatrixViewProps) {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onToggleComplete={handleToggleComplete}
+                      onToggleComplete={handleToggleCompleteForTaskCard}
                       onClick={handleTaskClick}
                       compact={false}
                     />
