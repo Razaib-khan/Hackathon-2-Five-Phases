@@ -1,47 +1,23 @@
-# Multi-stage build for AIDO Backend
-# Stage 1: Builder
-FROM python:3.11-slim as builder
+# Use the official Node.js runtime as the base image
+FROM node:20-alpine
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN npm ci --only=production
 
-# Stage 2: Runtime
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-
-# Set environment variables
-ENV PATH=/root/.local/bin:$PATH \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
-
-# Copy application code
+# Copy the rest of the application code
 COPY . .
 
-# Health check (simple file existence check instead of HTTP)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD test -f /app/src/main.py || exit 1
+# Build the TypeScript code
+RUN npm run build
 
-# HF Spaces standard port
-EXPOSE 7860
+# Expose the port the app runs on
+EXPOSE 5000
 
-# Run application on port 7860 for HF Spaces
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Define the command to run the application
+CMD ["npm", "start"]
