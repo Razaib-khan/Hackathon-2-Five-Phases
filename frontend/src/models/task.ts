@@ -56,6 +56,10 @@ export interface TaskUpdateRequest {
 }
 
 export interface TaskFilterOptions {
+  page?: number;
+  page_size?: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
   completed?: boolean;
   priority?: 'high' | 'medium' | 'low';
   due_date?: string; // ISO 8601 date string

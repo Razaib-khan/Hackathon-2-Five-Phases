@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { Task, TaskCreateRequest, TaskUpdateRequest } from '@/types';
+import { Task, TaskCreateRequest, TaskUpdateRequest } from '@/models/task';
 
 interface TaskFormProps {
   task?: Task;

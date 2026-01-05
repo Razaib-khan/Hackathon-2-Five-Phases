@@ -22,8 +22,7 @@ import {
   toggleTaskComplete,
 } from '@/lib/api';
 import { TaskList, TaskForm, TaskFiltersComponent, Modal } from '@/components';
-import { Task, TaskFilterOptions } from '@/models/task';
-import type { TaskCreateRequest, TaskUpdateRequest } from '@/types';
+import { Task, TaskFilterOptions, TaskCreateRequest, TaskUpdateRequest } from '@/models/task';
 import AppLogo from '@/components/AppLogo';
 
 export default function TasksPage() {

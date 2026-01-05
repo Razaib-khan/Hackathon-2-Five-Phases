@@ -9,7 +9,7 @@
  * - Task items
  */
 
-import type { Task } from '@/types';
+import { Task } from '@/models/task';
 import { TaskItem } from './TaskItem';
 
 interface TaskListProps {

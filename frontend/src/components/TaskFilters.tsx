@@ -9,11 +9,11 @@
  * - Sort options
  */
 
-import type { TaskFilters } from '@/types';
+import { TaskFilterOptions } from '@/models/task';
 
 interface TaskFiltersProps {
-  filters: TaskFilters;
-  onFiltersChange: (filters: TaskFilters) => void;
+  filters: TaskFilterOptions;
+  onFiltersChange: (filters: TaskFilterOptions) => void;
 }
 
 export function TaskFiltersComponent({ filters, onFiltersChange }: TaskFiltersProps) {
@@ -27,8 +27,8 @@ export function TaskFiltersComponent({ filters, onFiltersChange }: TaskFiltersPr
 
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [sort_by, sort_order] = e.target.value.split(':') as [
-      TaskFilters['sort_by'],
-      TaskFilters['sort_order']
+      TaskFilterOptions['sort_by'],
+      TaskFilterOptions['sort_order']
     ];
     onFiltersChange({ ...filters, sort_by, sort_order, page: 1 });
   };

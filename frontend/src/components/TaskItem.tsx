@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import type { Task } from '@/types';
+import { Task } from '@/models/task';
 
 interface TaskItemProps {
   task: Task;
