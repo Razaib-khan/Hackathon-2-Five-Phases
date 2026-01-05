@@ -31,6 +31,7 @@ import { ExportDialog } from '@/components/ExportDialog'
 import { KeyboardShortcutsPanel } from '@/components/KeyboardShortcutsPanel'
 import { OfflineQueueStatus } from '@/components/OfflineQueueStatus'
 import TaskCreationDialog from '@/components/TaskCreationDialog'
+import AppLogo from '@/components/AppLogo'
 import {
   LayoutList,
   LayoutGrid,
