@@ -35,6 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize theme from localStorage on mount
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (stored && ["light", "dark", "system"].includes(stored)) {
       setThemeState(stored);
@@ -45,6 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Resolve system preference
   useEffect(() => {
+    if (typeof window === 'undefined' || theme !== 'system') return;
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
     const updateResolvedTheme = () => {
@@ -68,6 +70,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Apply theme class to <html> element for Tailwind dark mode
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const root = document.documentElement;
 
     if (resolvedTheme === "dark") {

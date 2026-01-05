@@ -11,8 +11,8 @@ export default function Home() {
     // Check if user has a token stored
     const token = getToken()
     if (token) {
-      // Redirect to tasks page if authenticated
-      router.push('/tasks')
+      // Redirect to dashboard if authenticated
+      router.push('/dashboard')
     } else {
       // Redirect to login if not authenticated
       router.push('/login')
