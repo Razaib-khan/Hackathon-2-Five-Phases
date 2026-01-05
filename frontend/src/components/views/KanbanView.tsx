@@ -161,6 +161,10 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
     toggleComplete(userId, taskId)
   }
 
+  const handleToggleCompleteForTaskCard = (taskId: string) => {
+    toggleComplete(userId, taskId)
+  }
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -256,7 +260,7 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
             <div className="rotate-3 opacity-90">
               <TaskCard
                 task={activeTask}
-                onToggleComplete={handleToggleComplete}
+                onToggleComplete={handleToggleCompleteForTaskCard}
                 onClick={handleTaskClick}
                 compact={false}
               />
