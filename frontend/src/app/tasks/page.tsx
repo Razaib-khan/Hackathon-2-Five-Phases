@@ -22,7 +22,8 @@ import {
   toggleTaskComplete,
 } from '@/lib/api';
 import { TaskList, TaskForm, TaskFiltersComponent, Modal } from '@/components';
-import type { Task, TaskFilters, TaskCreateRequest, TaskUpdateRequest } from '@/types';
+import { Task, TaskFilterOptions } from '@/models/task';
+import type { TaskCreateRequest, TaskUpdateRequest } from '@/types';
 import AppLogo from '@/components/AppLogo';
 
 export default function TasksPage() {
@@ -36,7 +37,7 @@ export default function TasksPage() {
   const [error, setError] = useState('');
 
   // Filter state
-  const [filters, setFilters] = useState<TaskFilters>({
+  const [filters, setFilters] = useState<TaskFilterOptions>({
     page: 1,
     page_size: 20,
     sort_by: 'created_at',
