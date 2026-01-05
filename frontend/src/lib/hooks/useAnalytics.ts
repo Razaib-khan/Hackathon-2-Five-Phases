@@ -14,10 +14,11 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
+import { DashboardAnalytics, StreakData } from '@/models/analytics'
 
 interface UseAnalyticsReturn {
-  dashboard: api.DashboardAnalytics | null
-  streak: api.StreakData | null
+  dashboard: DashboardAnalytics | null
+  streak: StreakData | null
   isLoadingDashboard: boolean
   isLoadingStreak: boolean
   error: Error | null
@@ -26,8 +27,8 @@ interface UseAnalyticsReturn {
 }
 
 export function useAnalytics(): UseAnalyticsReturn {
-  const [dashboard, setDashboard] = useState<api.DashboardAnalytics | null>(null)
-  const [streak, setStreak] = useState<api.StreakData | null>(null)
+  const [dashboard, setDashboard] = useState<DashboardAnalytics | null>(null)
+  const [streak, setStreak] = useState<StreakData | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
   const [isLoadingStreak, setIsLoadingStreak] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -54,7 +55,7 @@ export function useAnalytics(): UseAnalyticsReturn {
     setIsLoadingStreak(true)
     setError(null)
     try {
-      const streakData = await api.getStreak()
+      const streakData = await api.getStreakData()
       setStreak(streakData)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch streak')

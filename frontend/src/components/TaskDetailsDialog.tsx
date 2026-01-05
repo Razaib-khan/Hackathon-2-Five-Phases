@@ -105,7 +105,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
     if (updated) {
       setIsEditing(false)
       // Refresh to get updated data with tags
-      fetchTasks(userId, {})
+      fetchTasks(userId)
     }
   }
 

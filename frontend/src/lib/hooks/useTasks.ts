@@ -18,15 +18,10 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
+import { Task as BaseTask, TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions } from '@/models/task'
 
-export interface Task {
-  id: string
-  user_id: string
-  title: string
-  description?: string
-  completed: boolean
-  priority: 'high' | 'medium' | 'low' | 'none'
-  due_date?: string
+// Extend the Task interface from models to include additional properties
+export interface ExtendedTask extends BaseTask {
   status: 'todo' | 'in_progress' | 'done'
   time_spent: number
   custom_order?: number
@@ -36,34 +31,39 @@ export interface Task {
   subtasks?: any[]
   subtask_count?: number
   completed_subtask_count?: number
-  created_at: string
-  updated_at: string
 }
 
+// Export Task as an alias for ExtendedTask to maintain compatibility with existing imports
+export type Task = ExtendedTask;
+
 interface UseTasksReturn {
-  tasks: Task[]
+  tasks: ExtendedTask[]
   total: number
   isLoading: boolean
   error: Error | null
-  fetchTasks: (userId: string, filters?: any) => Promise<void>
-  createTask: (userId: string, data: any) => Promise<Task | null>
-  updateTask: (userId: string, taskId: string, data: any) => Promise<Task | null>
+  fetchTasks: (userId: string, filters?: TaskFilterOptions) => Promise<void>
+  createTask: (userId: string, data: TaskCreateRequest) => Promise<ExtendedTask | null>
+  updateTask: (userId: string, taskId: string, data: TaskUpdateRequest) => Promise<ExtendedTask | null>
   deleteTask: (userId: string, taskId: string) => Promise<boolean>
   toggleComplete: (userId: string, taskId: string) => Promise<boolean>
 }
 
 export function useTasks(): UseTasksReturn {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasks, setTasks] = useState<ExtendedTask[]>([])
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const fetchTasks = useCallback(async (userId: string, filters?: any) => {
+  const fetchTasks = useCallback(async (userId: string, filters?: TaskFilterOptions) => {
     setIsLoading(true)
     setError(null)
     try {
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       const response = await api.getTasks(userId, filters)
-      setTasks(response.tasks as Task[])
+      setTasks(response.tasks as ExtendedTask[])
       setTotal(response.total)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch tasks')
@@ -74,16 +74,16 @@ export function useTasks(): UseTasksReturn {
     }
   }, [])
 
-  const createTask = useCallback(async (userId: string, data: any): Promise<Task | null> => {
+  const createTask = useCallback(async (userId: string, data: TaskCreateRequest): Promise<ExtendedTask | null> => {
     try {
-      const newTask = await api.createTask(userId, data)
+      const newTask = await api.createTask(data)
 
       // Optimistic update
-      setTasks((prev) => [newTask as Task, ...prev])
+      setTasks((prev) => [newTask as ExtendedTask, ...prev])
       setTotal((prev) => prev + 1)
 
       toast.success('Task created')
-      return newTask as Task
+      return newTask as ExtendedTask
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create task')
       setError(error)
@@ -93,7 +93,7 @@ export function useTasks(): UseTasksReturn {
   }, [])
 
   const updateTask = useCallback(
-    async (userId: string, taskId: string, data: any): Promise<Task | null> => {
+    async (userId: string, taskId: string, data: TaskUpdateRequest): Promise<ExtendedTask | null> => {
       // Store original task for rollback
       const originalTask = tasks.find((t) => t.id === taskId)
 
@@ -103,15 +103,15 @@ export function useTasks(): UseTasksReturn {
           prev.map((t) => (t.id === taskId ? { ...t, ...data } : t))
         )
 
-        const updatedTask = await api.updateTask(userId, taskId, data)
+        const updatedTask = await api.updateTask(taskId, data)
 
         // Update with server response
         setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? (updatedTask as Task) : t))
+          prev.map((t) => (t.id === taskId ? (updatedTask as ExtendedTask) : t))
         )
 
         toast.success('Task updated')
-        return updatedTask as Task
+        return updatedTask as ExtendedTask
       } catch (err) {
         // Rollback optimistic update
         if (originalTask) {
@@ -149,7 +149,7 @@ export function useTasks(): UseTasksReturn {
         setTasks((prev) => prev.filter((t) => t.id !== taskId))
         setTotal((prev) => prev - 1)
 
-        await api.deleteTask(userId, taskId)
+        await api.deleteTask(taskId)
 
         toast.success('Task deleted')
         return true
@@ -184,7 +184,7 @@ export function useTasks(): UseTasksReturn {
           )
         )
 
-        await api.toggleTaskComplete(userId, taskId, newCompleted)
+        await api.toggleTaskComplete(taskId, newCompleted)
 
         return true
       } catch (err) {

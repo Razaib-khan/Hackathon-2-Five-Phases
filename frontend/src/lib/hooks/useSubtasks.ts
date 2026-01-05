@@ -15,26 +15,17 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
-
-export interface Subtask {
-  id: string
-  task_id: string
-  title: string
-  completed: boolean
-  order_index: number
-  created_at: string
-  updated_at: string
-}
+import { Subtask, SubtaskCreateData, SubtaskUpdateData } from '@/models/task'
 
 interface UseSubtasksReturn {
   createSubtask: (
     taskId: string,
-    data: api.SubtaskCreateData,
+    data: SubtaskCreateData,
     currentCount?: number
   ) => Promise<Subtask | null>
   updateSubtask: (
     subtaskId: string,
-    data: api.SubtaskUpdateData
+    data: SubtaskUpdateData
   ) => Promise<Subtask | null>
   deleteSubtask: (subtaskId: string) => Promise<boolean>
 }
@@ -43,7 +34,7 @@ export function useSubtasks(): UseSubtasksReturn {
   const createSubtask = useCallback(
     async (
       taskId: string,
-      data: api.SubtaskCreateData,
+      data: SubtaskCreateData,
       currentCount: number = 0
     ): Promise<Subtask | null> => {
       // Check 50 subtask limit (FR-106)
@@ -79,7 +70,7 @@ export function useSubtasks(): UseSubtasksReturn {
   const updateSubtask = useCallback(
     async (
       subtaskId: string,
-      data: api.SubtaskUpdateData
+      data: SubtaskUpdateData
     ): Promise<Subtask | null> => {
       try {
         const updatedSubtask = await api.updateSubtask(subtaskId, data)

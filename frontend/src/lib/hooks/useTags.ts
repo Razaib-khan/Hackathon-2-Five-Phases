@@ -16,23 +16,16 @@
 import { useState, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
-
-export interface Tag {
-  id: string
-  user_id: string
-  name: string
-  color: string
-  created_at: string
-}
+import { Tag, TagCreateRequest, TagUpdateRequest, TagListResponse } from '@/models/tag'
 
 interface UseTagsReturn {
   tags: Tag[]
   total: number
   isLoading: boolean
   error: Error | null
-  fetchTags: () => Promise<void>
-  createTag: (data: api.TagCreateData) => Promise<Tag | null>
-  updateTag: (tagId: string, data: api.TagUpdateData) => Promise<Tag | null>
+  fetchTags: (userId: string) => Promise<void>
+  createTag: (data: TagCreateRequest) => Promise<Tag | null>
+  updateTag: (tagId: string, data: TagUpdateRequest) => Promise<Tag | null>
   deleteTag: (tagId: string) => Promise<boolean>
 }
 
@@ -42,11 +35,14 @@ export function useTags(): UseTagsReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const fetchTags = useCallback(async () => {
+  const fetchTags = useCallback(async (userId: string) => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.getTags()
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+      const response = await api.getTags(userId)
       setTags(response.tags)
       setTotal(response.total)
     } catch (err) {
@@ -58,13 +54,11 @@ export function useTags(): UseTagsReturn {
     }
   }, [])
 
-  // Auto-fetch on mount
-  useEffect(() => {
-    fetchTags()
-  }, [fetchTags])
+  // Auto-fetch on mount - userId should be passed when calling this function
+  // Components will call fetchTags with userId when needed
 
   const createTag = useCallback(
-    async (data: api.TagCreateData): Promise<Tag | null> => {
+    async (data: TagCreateRequest): Promise<Tag | null> => {
       // Check 100 tag limit (FR-106)
       if (tags.length >= 100) {
         toast.error('Maximum 100 tags allowed')
@@ -100,7 +94,7 @@ export function useTags(): UseTagsReturn {
   )
 
   const updateTag = useCallback(
-    async (tagId: string, data: api.TagUpdateData): Promise<Tag | null> => {
+    async (tagId: string, data: TagUpdateRequest): Promise<Tag | null> => {
       // Store original for rollback
       const originalTag = tags.find((t) => t.id === tagId)
 

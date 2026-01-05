@@ -107,7 +107,7 @@ export function AnalyticsDashboard({ userId, className = '' }: AnalyticsDashboar
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Completion Trend Chart */}
         <CompletionTrendChart
-          data={dashboard.completion_trend}
+          data={dashboard.completion_trends}
           className="lg:col-span-2"
         />
 
@@ -123,7 +123,7 @@ export function AnalyticsDashboard({ userId, className = '' }: AnalyticsDashboar
 
         {/* Streak Calendar */}
         <StreakCalendar
-          completionData={dashboard.completion_trend}
+          completionData={dashboard.completion_trends}
           currentStreak={streak?.current_streak || 0}
           longestStreak={streak?.longest_streak || 0}
           className="lg:col-span-2"

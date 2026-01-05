@@ -1,6 +1,7 @@
-import { TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions, TaskListResponse } from '@/models/task';
+import { TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions, TaskListResponse, Subtask, SubtaskCreateData, SubtaskUpdateData } from '@/models/task';
 import { TagCreateRequest, TagUpdateRequest, TagListResponse } from '@/models/tag';
 import { UserPreferences, UserPreferencesUpdateRequest } from '@/models/user-preferences';
+import { DashboardAnalytics, StreakData } from '@/models/analytics';
 
 /**
  * API Client Utilities
@@ -93,7 +94,12 @@ export async function getTasks(userId: string, filters?: TaskFilterOptions): Pro
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value))
+        if (Array.isArray(value)) {
+          // Handle array values by adding each as a separate parameter
+          value.forEach(v => queryParams.append(key, String(v)))
+        } else {
+          queryParams.append(key, String(value))
+        }
       }
     })
   }
@@ -133,7 +139,12 @@ export async function getTags(userId: string, filters?: any): Promise<TagListRes
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value))
+        if (Array.isArray(value)) {
+          // Handle array values by adding each as a separate parameter
+          value.forEach(v => queryParams.append(key, String(v)))
+        } else {
+          queryParams.append(key, String(value))
+        }
       }
     })
   }
@@ -168,7 +179,12 @@ export async function exportTasks(format: 'json' | 'csv', params?: { include_com
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        if (Array.isArray(value)) {
+          // Handle array values by adding each as a separate parameter
+          value.forEach(v => url.searchParams.append(key, String(v)));
+        } else {
+          url.searchParams.append(key, String(value));
+        }
       }
     });
   }
@@ -177,17 +193,17 @@ export async function exportTasks(format: 'json' | 'csv', params?: { include_com
 }
 
 // Analytics API functions
-export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<any> {
+export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<DashboardAnalytics> {
   const url = new URL('/api/analytics/dashboard', `${API_URL}`);
   if (period) {
     url.searchParams.append('period', period);
   }
 
-  return apiCall<any>(url.pathname + url.search, { method: 'GET' });
+  return apiCall<DashboardAnalytics>(url.pathname + url.search, { method: 'GET' });
 }
 
-export async function getStreakData(): Promise<any> {
-  return apiCall<any>('/api/analytics/streak', { method: 'GET' });
+export async function getStreakData(): Promise<StreakData> {
+  return apiCall<StreakData>('/api/analytics/streak', { method: 'GET' });
 }
 
 // User Preferences API functions
@@ -212,6 +228,25 @@ export async function updateUserSettings(data: any): Promise<any> {
     method: 'PATCH',
     body: JSON.stringify(data)
   });
+}
+
+// Subtask API functions
+export async function createSubtask(taskId: string, data: SubtaskCreateData): Promise<Subtask> {
+  return apiCall<Subtask>(`/api/tasks/${taskId}/subtasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSubtask(subtaskId: string, data: SubtaskUpdateData): Promise<Subtask> {
+  return apiCall<Subtask>(`/api/subtasks/${subtaskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSubtask(subtaskId: string): Promise<void> {
+  return apiCall<void>(`/api/subtasks/${subtaskId}`, { method: 'DELETE' });
 }
 
 export async function checkHealth() {

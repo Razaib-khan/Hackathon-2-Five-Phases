@@ -21,14 +21,14 @@ import { Filter, X, Calendar, Search, Tag as TagIcon } from 'lucide-react'
 import { useFilters } from '@/contexts/FilterContext'
 import { useTags } from '@/lib/hooks/useTags'
 
-const PRIORITY_OPTIONS = [
+const PRIORITY_OPTIONS: { value: 'high' | 'medium' | 'low' | 'none'; label: string; color: string }[] = [
   { value: 'high', label: 'High', color: 'bg-red-100 text-red-800 border-red-300' },
   { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
   { value: 'low', label: 'Low', color: 'bg-blue-100 text-blue-800 border-blue-300' },
   { value: 'none', label: 'None', color: 'bg-gray-100 text-gray-800 border-gray-300' },
 ]
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS: { value: 'todo' | 'in_progress' | 'done'; label: string; color: string }[] = [
   { value: 'todo', label: 'To Do', color: 'bg-gray-100 text-gray-800 border-gray-300' },
   { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 text-blue-800 border-blue-300' },
   { value: 'done', label: 'Done', color: 'bg-green-100 text-green-800 border-green-300' },
@@ -64,7 +64,7 @@ export function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
     (filters.due_date_end ? 1 : 0) +
     (filters.search.length > 0 ? 1 : 0)
 
-  const togglePriority = (priority: string) => {
+  const togglePriority = (priority: 'high' | 'medium' | 'low' | 'none') => {
     if (filters.priority.includes(priority)) {
       setPriority(filters.priority.filter((p) => p !== priority))
     } else {
@@ -72,7 +72,7 @@ export function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
     }
   }
 
-  const toggleStatus = (status: string) => {
+  const toggleStatus = (status: 'todo' | 'in_progress' | 'done') => {
     if (filters.status.includes(status)) {
       setStatus(filters.status.filter((s) => s !== status))
     } else {

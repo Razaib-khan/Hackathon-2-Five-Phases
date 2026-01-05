@@ -53,6 +53,7 @@ export function SubtaskList({ taskId, subtasks, onUpdate }: SubtaskListProps) {
     const success = await createSubtask(
       taskId,
       {
+        task_id: taskId,
         title: newSubtaskTitle.trim(),
         order_index: totalCount,
       },

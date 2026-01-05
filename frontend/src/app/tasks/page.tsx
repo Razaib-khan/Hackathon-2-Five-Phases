@@ -88,7 +88,7 @@ export default function TasksPage() {
 
     setIsSubmitting(true);
     try {
-      await createTask(user.id, data);
+      await createTask(data as TaskCreateRequest);
       setShowCreateModal(false);
       fetchTasks();
     } finally {
@@ -102,7 +102,7 @@ export default function TasksPage() {
 
     setIsSubmitting(true);
     try {
-      await updateTask(user.id, editingTask.id, data);
+      await updateTask(editingTask.id, data as TaskUpdateRequest);
       setEditingTask(null);
       fetchTasks();
     } finally {
@@ -115,7 +115,7 @@ export default function TasksPage() {
     if (!user) return;
 
     try {
-      const updated = await toggleTaskComplete(user.id, task.id);
+      const updated = await toggleTaskComplete(task.id);
       setTasks((prev) =>
         prev.map((t) => (t.id === updated.id ? updated : t))
       );
@@ -129,7 +129,7 @@ export default function TasksPage() {
     if (!user || !deletingTask) return;
 
     try {
-      await deleteTask(user.id, deletingTask.id);
+      await deleteTask(deletingTask.id);
       setDeletingTask(null);
       fetchTasks();
     } catch (err) {

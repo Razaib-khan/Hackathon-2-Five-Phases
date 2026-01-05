@@ -15,17 +15,18 @@
 import { useState, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
+import { UserPreferences, UserPreferencesUpdateRequest } from '@/models/user-preferences'
 
 interface UseSettingsReturn {
-  settings: api.UserSettings | null
+  settings: UserPreferences | null
   isLoading: boolean
   error: Error | null
   fetchSettings: () => Promise<void>
-  updateSettings: (data: api.UserSettingsUpdateData) => Promise<boolean>
+  updateSettings: (data: UserPreferencesUpdateRequest) => Promise<boolean>
 }
 
 export function useSettings(): UseSettingsReturn {
-  const [settings, setSettings] = useState<api.UserSettings | null>(null)
+  const [settings, setSettings] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
@@ -33,7 +34,7 @@ export function useSettings(): UseSettingsReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const userSettings = await api.getSettings()
+      const userSettings = await api.getUserPreferences()
       setSettings(userSettings)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch settings')
@@ -50,7 +51,7 @@ export function useSettings(): UseSettingsReturn {
   }, [fetchSettings])
 
   const updateSettings = useCallback(
-    async (data: api.UserSettingsUpdateData): Promise<boolean> => {
+    async (data: UserPreferencesUpdateRequest): Promise<boolean> => {
       // Store original for rollback
       const originalSettings = settings
 
@@ -60,7 +61,7 @@ export function useSettings(): UseSettingsReturn {
           setSettings({ ...settings, ...data })
         }
 
-        const updatedSettings = await api.updateSettings(data)
+        const updatedSettings = await api.updateUserPreferences(data)
 
         // Update with server response
         setSettings(updatedSettings)

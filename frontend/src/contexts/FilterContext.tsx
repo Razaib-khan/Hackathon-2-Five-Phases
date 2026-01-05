@@ -18,8 +18,8 @@
 import React, { createContext, useContext, useState } from "react";
 
 interface FilterState {
-  priority: string[];
-  status: string[];
+  priority: ('high' | 'medium' | 'low' | 'none')[];
+  status: ('todo' | 'in_progress' | 'done')[];
   tag_ids: string[];
   due_date_start: Date | null;
   due_date_end: Date | null;
@@ -28,8 +28,8 @@ interface FilterState {
 
 interface FilterContextType {
   filters: FilterState;
-  setPriority: (priorities: string[]) => void;
-  setStatus: (statuses: string[]) => void;
+  setPriority: (priorities: ('high' | 'medium' | 'low' | 'none')[]) => void;
+  setStatus: (statuses: ('todo' | 'in_progress' | 'done')[]) => void;
   setTagIds: (tagIds: string[]) => void;
   setDueDateRange: (start: Date | null, end: Date | null) => void;
   setDueDateStart: (start: Date | null) => void;
@@ -53,11 +53,19 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
 
   const setPriority = (priorities: string[]) => {
-    setFilters((prev) => ({ ...prev, priority: priorities }));
+    // Validate that all priority values are valid
+    const validPriorities = priorities.filter(p =>
+      ['high', 'medium', 'low', 'none'].includes(p)
+    ) as ('high' | 'medium' | 'low' | 'none')[];
+    setFilters((prev) => ({ ...prev, priority: validPriorities }));
   };
 
   const setStatus = (statuses: string[]) => {
-    setFilters((prev) => ({ ...prev, status: statuses }));
+    // Validate that all status values are valid
+    const validStatuses = statuses.filter(s =>
+      ['todo', 'in_progress', 'done'].includes(s)
+    ) as ('todo' | 'in_progress' | 'done')[];
+    setFilters((prev) => ({ ...prev, status: validStatuses }));
   };
 
   const setTagIds = (tagIds: string[]) => {

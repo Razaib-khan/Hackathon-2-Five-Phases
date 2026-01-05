@@ -7,7 +7,7 @@ export interface Task {
   title: string;
   description?: string;
   completed: boolean;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | 'none';
   due_date?: string; // ISO 8601 date string
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
@@ -28,6 +28,18 @@ export interface Subtask {
   order_index: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface SubtaskCreateData {
+  task_id: string;
+  title: string;
+  order_index?: number;
+}
+
+export interface SubtaskUpdateData {
+  title?: string;
+  completed?: boolean;
+  order_index?: number;
 }
 
 export interface TaskCreateRequest {
@@ -53,6 +65,8 @@ export interface TaskUpdateRequest {
   category?: string;
   position?: number; // for ordering tasks
   reminder_time?: string;
+  time_spent?: number; // for time tracking
+  status?: 'todo' | 'in_progress' | 'done'; // task status
 }
 
 export interface TaskFilterOptions {
@@ -61,7 +75,8 @@ export interface TaskFilterOptions {
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   completed?: boolean;
-  priority?: 'high' | 'medium' | 'low';
+  priority?: 'high' | 'medium' | 'low' | 'none' | ('high' | 'medium' | 'low' | 'none')[]; // Can be single or array
+  status?: 'todo' | 'in_progress' | 'done' | ('todo' | 'in_progress' | 'done')[]; // Can be single or array
   due_date?: string; // ISO 8601 date string
   tags?: string[]; // array of tag IDs
   category?: string;
