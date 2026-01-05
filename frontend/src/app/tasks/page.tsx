@@ -23,6 +23,7 @@ import {
 } from '@/lib/api';
 import { TaskList, TaskForm, TaskFiltersComponent, Modal } from '@/components';
 import type { Task, TaskFilters, TaskCreateRequest, TaskUpdateRequest } from '@/types';
+import AppLogo from '@/components/AppLogo';
 
 export default function TasksPage() {
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
@@ -155,7 +156,9 @@ export default function TasksPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">AIDO</h1>
+          <div className="flex items-center">
+            <AppLogo size="navbar" />
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user.email}</span>
             <button
