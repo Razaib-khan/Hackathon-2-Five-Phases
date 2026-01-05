@@ -39,7 +39,7 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./backend
-        run: npm run lint
+        run: npm run lint:check
         continue-on-error: true
 
       - name: Type check with TypeScript
