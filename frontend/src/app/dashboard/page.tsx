@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useView } from '@/contexts/ViewContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
@@ -52,6 +53,14 @@ const VIEW_ICONS = {
 }
 
 export default function DashboardPage() {
+  return (
+    <ErrorBoundary>
+      <DashboardContent />
+    </ErrorBoundary>
+  )
+}
+
+function DashboardContent() {
   const router = useRouter()
   const { viewMode, setViewMode } = useView()
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -210,7 +219,7 @@ export default function DashboardPage() {
                 onClick={() => setShowCreateTask(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
                 New Task
               </button>
             </div>
