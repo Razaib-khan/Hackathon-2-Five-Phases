@@ -5,6 +5,16 @@
 **Status**: Draft
 **Input**: User description: "first of all there is no direct way of going to the /dashboard and secondly when going here 'https://razaib-khan.github.io/Hackathon-2-Five-Phases/dashboard/' i am getting an error 'Application error: a client-side exception has occurred while loading razaib-khan.github.io (see the browser console for more information).' if the dashboard route was meant to be the home page then after logging in the user should redirect there and also home page is still in it's oldest version the home page is present here 'https://razaib-khan.github.io/Hackathon-2-Five-Phases'"
 
+## Clarifications
+
+### Session 2026-01-05
+
+- Q: How should authentication state be stored and managed in the static Next.js application? → A: localStorage with JWT tokens (access + refresh)
+- Q: What style of error messages should be displayed when the dashboard fails to load or authentication fails? → A: User-friendly messages with recovery actions (e.g., "Unable to load dashboard. [Retry] [Logout]")
+- Q: What diagnostic data should be captured to help troubleshoot dashboard access failures? → A: Client errors + API response failures with status codes and error messages
+- Q: What is the maximum acceptable load time for the dashboard page to become interactive? → A: No specific target (best effort, focus on functionality first)
+- Q: How long should JWT access tokens and refresh tokens remain valid before requiring re-authentication? → A: Access: 1 hour, Refresh: 7 days
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Direct Dashboard Access (Priority: P1)
@@ -58,8 +68,8 @@ As a visitor to the application, I expect to see the current version of the home
 ### Edge Cases
 
 - What happens when a user directly accesses `/dashboard` without being logged in? (Should redirect to login with return URL)
-- How does the system handle expired sessions when accessing `/dashboard`? (Should redirect to login and preserve the intent to return to dashboard)
-- What happens if the dashboard API calls fail during initial load? (Should show error UI with retry option, not crash)
+- How does the system handle expired sessions when accessing `/dashboard`? (If access token expired but refresh token valid: automatically refresh and continue; if both expired after 7 days: redirect to login with return URL to preserve intent to return to dashboard)
+- What happens if the dashboard API calls fail during initial load? (Should display user-friendly error message like "Unable to load your tasks" with "Retry" button; log API response status code, error message, and request details to console for troubleshooting)
 - How does the app behave when navigating between home page and dashboard repeatedly? (Should maintain state and not cause memory leaks)
 - What happens on browser back/forward navigation after login redirect? (Should respect browser history without causing auth loops)
 
@@ -73,10 +83,14 @@ As a visitor to the application, I expect to see the current version of the home
 - **FR-004**: System MUST redirect unauthenticated users attempting to access `/dashboard` to the login page with a return URL parameter
 - **FR-005**: System MUST display the current version of the home page at the root URL `/` matching the latest codebase changes
 - **FR-006**: System MUST handle GitHub Pages base path (`/Hackathon-2-Five-Phases`) correctly for all routes and asset references
-- **FR-007**: System MUST preserve authentication state across page navigations and refreshes
-- **FR-008**: System MUST handle client-side navigation between routes without full page reloads where appropriate
-- **FR-009**: System MUST provide clear error messages and recovery options if dashboard fails to load
-- **FR-010**: System MUST ensure all static assets (CSS, JS, images) load correctly with the GitHub Pages base path
+- **FR-007**: System MUST preserve authentication state across page navigations and refreshes using localStorage with JWT tokens (access token + refresh token)
+- **FR-008**: System MUST validate JWT tokens on protected routes and redirect to login if token is missing or expired
+- **FR-009**: System MUST handle client-side navigation between routes without full page reloads where appropriate
+- **FR-010**: System MUST display user-friendly error messages in plain language with actionable recovery options (e.g., "Retry" and "Logout" buttons) when dashboard fails to load or authentication fails
+- **FR-011**: System MUST ensure all static assets (CSS, JS, images) load correctly with the GitHub Pages base path
+- **FR-012**: System MUST log technical error details to browser console for debugging while showing user-friendly messages in the UI
+- **FR-013**: System MUST capture and log client-side JavaScript errors, API response failures (including status codes and error messages), and authentication failures to browser console for troubleshooting
+- **FR-014**: System MUST issue JWT access tokens with 1-hour expiration and refresh tokens with 7-day expiration; automatically attempt token refresh when access token expires
 
 ### Technical Context
 
@@ -100,7 +114,7 @@ Current issues identified:
 ### Key Entities
 
 - **Dashboard Route**: The main application interface at `/dashboard` containing task views, filters, and analytics
-- **Authentication State**: User session data that determines access to protected routes
+- **Authentication State**: JWT tokens (access + refresh) stored in localStorage that determine access to protected routes; includes user identity and expiration timestamps
 - **Navigation Context**: Routing state that manages transitions between pages and preserves user intent
 - **Base Path Configuration**: GitHub Pages deployment settings that ensure all URLs work with the repository path prefix
 
@@ -126,10 +140,14 @@ The application uses Next.js 15 App Router with static export for GitHub Pages. 
 
 ### Authentication Flow
 
-Current authentication is managed through:
-- API routes for login/signup
-- Session management with cookies or tokens
-- Protected route middleware or client-side auth checks
+Authentication is managed through:
+- API routes for login/signup that return JWT tokens
+- localStorage stores both access token (1-hour expiration) and refresh token (7-day expiration)
+- Access token used for API authentication (sent in Authorization header)
+- Refresh token automatically used to obtain new access tokens when expired
+- Client-side auth checks on protected routes validate JWT presence and expiration
+- Token validation occurs before rendering protected dashboard content
+- After 7 days of inactivity, users must re-authenticate (refresh token expired)
 
 ### Deployment Pipeline
 
@@ -143,7 +161,7 @@ GitHub Actions workflow builds and deploys to GitHub Pages:
 - Implementing new dashboard features or views
 - Redesigning the authentication system
 - Adding server-side rendering capabilities (static export is required for GitHub Pages)
-- Performance optimization beyond fixing the critical errors
+- Performance optimization and load time targets (focus on fixing critical P1 access errors first; performance tuning can be addressed in future iterations)
 - Adding analytics or monitoring (beyond basic error tracking)
 
 ## Dependencies
@@ -162,8 +180,8 @@ GitHub Actions workflow builds and deploys to GitHub Pages:
 **Risk 2**: Base path configuration may break existing working routes
 - **Mitigation**: Test all routes after changes, use Next.js's built-in base path support consistently
 
-**Risk 3**: Authentication state may not persist across static page loads
-- **Mitigation**: Use client-side storage (localStorage/sessionStorage) with proper initialization checks
+**Risk 3**: JWT tokens in localStorage may not be validated properly on initial page load
+- **Mitigation**: Implement token validation check before rendering protected content; use loading states during validation
 
 **Risk 4**: GitHub Pages caching may prevent users from seeing fixes immediately
 - **Mitigation**: Include cache-busting strategies, document expected propagation delay for users
