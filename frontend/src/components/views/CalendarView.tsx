@@ -49,8 +49,8 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
 
   // Fetch tasks on mount and when filters change
   useEffect(() => {
-    fetchTasks(userId, filters)
-  }, [userId, filters, fetchTasks])
+    fetchTasks(filters)
+  }, [filters, fetchTasks])
 
   // Generate calendar days
   const generateCalendarDays = (): Date[] => {
@@ -116,7 +116,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-red-600 dark:text-red-400 mb-4">Failed to load tasks</p>
         <button
-          onClick={() => fetchTasks(userId, filters)}
+          onClick={() => fetchTasks(filters)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
           Retry
@@ -268,7 +268,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(userId, task.id)
+                    toggleComplete(task.id)
                   }}
                   className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
@@ -326,7 +326,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(userId, task.id)
+                    toggleComplete(task.id)
                   }}
                   className="h-4 w-4 rounded border-gray-300"
                 />
