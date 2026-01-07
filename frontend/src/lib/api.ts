@@ -356,3 +356,31 @@ export async function getStoredUser() {
 }
 
 export { getToken }
+<<<<<<< HEAD
+=======
+
+// ============================================================================
+// Tags API (T070)
+// ============================================================================
+
+export interface Tag {
+  id: string
+  user_id: string
+  name: string
+  color: string
+  created_at: string
+}
+
+export interface TagCreateData {
+  name: string
+  color?: string
+}
+
+export interface TagUpdateData {
+  name?: string
+  color?: string
+}
+
+
+
+>>>>>>> 0ac7698 (fix: remove duplicate functions and add missing logout function)
