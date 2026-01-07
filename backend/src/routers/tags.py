@@ -14,9 +14,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..security.jwt import get_current_user
 from ..models.user import User
 from ..schemas.tag import (

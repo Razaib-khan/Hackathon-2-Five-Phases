@@ -16,9 +16,10 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session, joinedload
+from sqlmodel import Session
+from sqlalchemy.orm import joinedload
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..security.jwt import get_current_user
 from ..models.user import User
 from ..models.task import Task

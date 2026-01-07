@@ -13,9 +13,9 @@ Security:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..models.user import User
 from ..schemas.auth import (
     AuthResponse,

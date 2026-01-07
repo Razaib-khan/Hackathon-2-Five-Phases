@@ -19,10 +19,11 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session, joinedload
+from sqlmodel import Session
+from sqlalchemy.orm import joinedload
 from sqlalchemy import and_, or_
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..models.task import Task
 from ..models.tag import Tag
 from ..models.task_tag import TaskTag

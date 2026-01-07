@@ -19,9 +19,9 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..models.task import Task
 from ..schemas.task import (
     TaskCreateRequest,

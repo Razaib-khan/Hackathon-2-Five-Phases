@@ -12,10 +12,11 @@ from typing import Annotated, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlmodel import Session
+from sqlalchemy.orm import joinedload
 from sqlalchemy import func, text
 
-from ..db.session import get_session
+from ..config.database import get_session
 from ..security.jwt import get_current_user
 from ..models.user import User
 from ..models.task import Task
