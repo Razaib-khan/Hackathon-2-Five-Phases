@@ -24,5 +24,16 @@ pydantic-settings>=2.0.0,<3.0.0
 # CORS
 starlette>=0.27.0
 
+# Password Hashing
+passlib[bcrypt]>=1.7.4,<2.0.0
+
+# Database Drivers
+asyncpg>=0.28.0,<1.0.0
+psycopg2-binary>=2.9.7,<3.0.0
+neon>=0.3.0,<1.0.0
+
+# Rate Limiting (optional)
+redis>=5.0.0,<6.0.0
+
 # Development
 httpx>=0.24.0,<1.0.0
