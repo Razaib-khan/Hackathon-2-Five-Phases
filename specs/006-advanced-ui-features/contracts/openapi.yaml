@@ -1,0 +1,1212 @@
+openapi: 3.1.0
+info:
+  title: AIDO Todo App API - Advanced UI Features
+  description: |
+    REST API for AIDO Todo App with advanced features including priority management,
+    tags, subtasks, multiple view modes, and productivity tools.
+
+    **Feature**: 006-advanced-ui-features
+    **Date**: 2026-01-03
+    **Base Path**: /api/v1
+
+    **Authentication**: All endpoints require JWT Bearer token in Authorization header
+    **Rate Limiting**: 100 requests per minute per user (FR-104)
+  version: 1.0.0
+  contact:
+    name: AIDO Development Team
+
+servers:
+  - url: https://api.aido.example.com/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Tasks
+    description: Task CRUD operations with advanced features
+  - name: Tags
+    description: Tag management and assignment
+  - name: Subtasks
+    description: Subtask creation and management
+  - name: Settings
+    description: User preferences and configuration
+  - name: Analytics
+    description: Dashboard and productivity metrics
+
+paths:
+  # ============================================================================
+  # TASKS ENDPOINTS
+  # ============================================================================
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: Get all tasks for authenticated user
+      description: |
+        Retrieve tasks with optional filtering and sorting.
+        Supports combined filters for priority, tags, dates, status, and search.
+
+        **Requirements**: FR-003, FR-013, FR-019, FR-051, FR-052
+      parameters:
+        - name: priority
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [high, medium, low, none]
+          description: Filter by one or more priority levels
+          example: [high, medium]
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [todo, in_progress, done]
+          description: Filter by task status
+          example: [todo, in_progress]
+        - name: tag_ids
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+          description: Filter by tag IDs (AND logic)
+          example: ["550e8400-e29b-41d4-a716-446655440000"]
+        - name: due_date_start
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter tasks due on or after this date
+          example: "2026-01-01T00:00:00Z"
+        - name: due_date_end
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter tasks due on or before this date
+          example: "2026-01-31T23:59:59Z"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: Search in task titles and descriptions (FR-055)
+          example: "meeting notes"
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [priority, due_date, custom_order, created_at]
+            default: created_at
+          description: Sort order for results
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort direction
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+          description: Maximum tasks to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of tasks to skip (pagination)
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  total:
+                    type: integer
+                    description: Total count of matching tasks
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      tags: [Tasks]
+      summary: Create a new task
+      description: |
+        Create a new task with optional priority, due date, tags, and status.
+
+        **Requirements**: FR-001, FR-005, FR-011, FR-017
+        **Limits**: Maximum 10,000 tasks per user (FR-106)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Task limit reached (10,000 tasks)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Task limit reached"
+                message: "You have reached the maximum of 10,000 tasks. Delete or archive tasks to continue."
+                code: "LIMIT_EXCEEDED"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /tasks/{task_id}:
+    get:
+      tags: [Tasks]
+      summary: Get a single task by ID
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Tasks]
+      summary: Update a task
+      description: |
+        Update task properties with conflict detection.
+
+        **Requirements**: FR-005, FR-103 (conflict detection)
+        **Clarification Q1**: Completing task auto-completes all subtasks
+        **Clarification Q2**: Version-based conflict detection
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict - task was modified by another session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Task was modified elsewhere"
+                  current_version:
+                    type: integer
+                    example: 5
+                  latest_data:
+                    $ref: '#/components/schemas/Task'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      description: |
+        Delete a task and all associated subtasks (CASCADE).
+        Tag associations are removed but tags themselves remain.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/bulk:
+    patch:
+      tags: [Tasks]
+      summary: Bulk update tasks
+      description: |
+        Update multiple tasks at once (status, priority, tags).
+
+        **Requirements**: FR-046 to FR-050
+        **Limits**: Recommended maximum 50 tasks per request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 50
+                  example: ["550e8400-e29b-41d4-a716-446655440000"]
+                updates:
+                  type: object
+                  properties:
+                    completed:
+                      type: boolean
+                      example: true
+                    priority:
+                      type: string
+                      enum: [high, medium, low, none]
+                    status:
+                      type: string
+                      enum: [todo, in_progress, done]
+                    add_tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+                    remove_tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+              required: [task_ids, updates]
+      responses:
+        '200':
+          description: Bulk update completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_count:
+                    type: integer
+                    example: 25
+                  failed_ids:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                    description: Task IDs that failed to update
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    delete:
+      tags: [Tasks]
+      summary: Bulk delete tasks
+      description: |
+        Delete multiple tasks at once.
+
+        **Requirements**: FR-049
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 50
+              required: [task_ids]
+      responses:
+        '200':
+          description: Bulk delete completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                    example: 25
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================================
+  # TAGS ENDPOINTS
+  # ============================================================================
+
+  /tags:
+    get:
+      tags: [Tags]
+      summary: Get all tags for authenticated user
+      description: |
+        Retrieve all user-created tags.
+
+        **Requirements**: FR-016, FR-020
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Tags]
+      summary: Create a new tag
+      description: |
+        Create a new tag with name and color.
+
+        **Requirements**: FR-016
+        **Limits**: Maximum 100 tags per user (FR-106)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreate'
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Tag limit reached (100 tags)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /tags/{tag_id}:
+    patch:
+      tags: [Tags]
+      summary: Update a tag
+      description: |
+        Update tag name or color.
+
+        **Requirements**: FR-020
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  example: "Work (Urgent)"
+                color:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  example: "#FF5733"
+      responses:
+        '200':
+          description: Tag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Tags]
+      summary: Delete a tag
+      description: |
+        Delete a tag and remove it from all associated tasks (CASCADE).
+
+        **Requirements**: FR-020, FR-021
+      parameters:
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '204':
+          description: Tag deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # SUBTASKS ENDPOINTS
+  # ============================================================================
+
+  /tasks/{task_id}/subtasks:
+    post:
+      tags: [Subtasks]
+      summary: Add a subtask to a task
+      description: |
+        Create a new subtask under a parent task.
+
+        **Requirements**: FR-036
+        **Limits**: Maximum 50 subtasks per task (FR-106)
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubtaskCreate'
+      responses:
+        '201':
+          description: Subtask created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subtask'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Subtask limit reached (50 per task)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /subtasks/{subtask_id}:
+    patch:
+      tags: [Subtasks]
+      summary: Update a subtask
+      description: |
+        Update subtask title, completion status, or order.
+
+        **Requirements**: FR-040
+      parameters:
+        - name: subtask_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                completed:
+                  type: boolean
+                order_index:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Subtask updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subtask'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Subtasks]
+      summary: Delete a subtask
+      parameters:
+        - name: subtask_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Subtask deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # USER SETTINGS ENDPOINTS
+  # ============================================================================
+
+  /user/settings:
+    get:
+      tags: [Settings]
+      summary: Get user settings
+      description: |
+        Retrieve all user preferences.
+
+        **Requirements**: FR-091 to FR-095
+      responses:
+        '200':
+          description: Settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Settings]
+      summary: Update user settings
+      description: |
+        Update one or more user preferences.
+
+        **Requirements**: FR-091 to FR-095
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                theme:
+                  type: string
+                  enum: [light, dark, system]
+                default_view:
+                  type: string
+                  enum: [list, kanban, calendar, matrix]
+                date_format:
+                  type: string
+                  example: "MMM dd, yyyy"
+                week_start_day:
+                  type: integer
+                  enum: [0, 1]
+                  description: "0 = Sunday, 1 = Monday"
+                animations_enabled:
+                  type: boolean
+                pomodoro_work_minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 60
+                pomodoro_break_minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================================
+  # ANALYTICS ENDPOINTS
+  # ============================================================================
+
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get dashboard statistics
+      description: |
+        Retrieve productivity metrics for dashboard charts.
+
+        **Requirements**: FR-067 to FR-071
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year, all]
+            default: month
+          description: Time period for trend analysis
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /analytics/streak:
+    get:
+      tags: [Analytics]
+      summary: Get completion streak
+      description: |
+        Calculate current and longest completion streaks.
+
+        **Requirements**: FR-070
+      responses:
+        '200':
+          description: Streak data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_streak:
+                    type: integer
+                    example: 7
+                  longest_streak:
+                    type: integer
+                    example: 14
+                  last_completion_date:
+                    type: string
+                    format: date
+                    example: "2026-01-03"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================================
+  # EXPORT ENDPOINT
+  # ============================================================================
+
+  /export:
+    get:
+      tags: [Settings]
+      summary: Export all user data
+      description: |
+        Export tasks, tags, and settings in JSON or CSV format.
+
+        **Requirements**: FR-094
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [json, csv]
+          description: Export format
+      responses:
+        '200':
+          description: Data exported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+                  settings:
+                    $ref: '#/components/schemas/UserSettings'
+            text/csv:
+              schema:
+                type: string
+                example: "id,title,priority,due_date,status,completed\n..."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from /auth/login endpoint
+
+  parameters:
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique task identifier
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    TagId:
+      name: tag_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique tag identifier
+
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        completed:
+          type: boolean
+        priority:
+          type: string
+          enum: [high, medium, low, none]
+          default: none
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+          default: todo
+        time_spent:
+          type: integer
+          description: Accumulated minutes tracked
+          minimum: 0
+          default: 0
+        custom_order:
+          type: integer
+          nullable: true
+        recurrence_pattern:
+          type: object
+          nullable: true
+          properties:
+            enabled:
+              type: boolean
+            frequency:
+              type: string
+              enum: [daily, weekly, monthly]
+            interval:
+              type: integer
+              minimum: 1
+            end_date:
+              type: string
+              format: date-time
+              nullable: true
+        version:
+          type: integer
+          description: Optimistic locking version
+          default: 1
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        subtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subtask'
+        subtask_count:
+          type: integer
+          description: Total number of subtasks
+        completed_subtask_count:
+          type: integer
+          description: Number of completed subtasks
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, user_id, title, completed, priority, status, time_spent, version, created_at, updated_at]
+
+    TaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          enum: [high, medium, low, none]
+          default: none
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+          default: todo
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 10
+        recurrence_pattern:
+          type: object
+          nullable: true
+          properties:
+            enabled:
+              type: boolean
+            frequency:
+              type: string
+              enum: [daily, weekly, monthly]
+            interval:
+              type: integer
+              minimum: 1
+      required: [title]
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        completed:
+          type: boolean
+        priority:
+          type: string
+          enum: [high, medium, low, none]
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        time_spent:
+          type: integer
+          minimum: 0
+        custom_order:
+          type: integer
+          nullable: true
+        recurrence_pattern:
+          type: object
+          nullable: true
+        version:
+          type: integer
+          description: Required for optimistic locking
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: "#FF5733"
+        created_at:
+          type: string
+          format: date-time
+      required: [id, user_id, name, color, created_at]
+
+    TagCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          default: "#808080"
+      required: [name]
+
+    Subtask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        completed:
+          type: boolean
+        order_index:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, task_id, title, completed, order_index, created_at, updated_at]
+
+    SubtaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        order_index:
+          type: integer
+          minimum: 0
+          default: 0
+      required: [title]
+
+    UserSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        theme:
+          type: string
+          enum: [light, dark, system]
+          default: system
+        default_view:
+          type: string
+          enum: [list, kanban, calendar, matrix]
+          default: list
+        date_format:
+          type: string
+          default: "MMM dd, yyyy"
+        week_start_day:
+          type: integer
+          enum: [0, 1]
+          default: 0
+        animations_enabled:
+          type: boolean
+          default: true
+        pomodoro_work_minutes:
+          type: integer
+          minimum: 1
+          maximum: 60
+          default: 25
+        pomodoro_break_minutes:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 5
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, user_id, theme, default_view, date_format, week_start_day, animations_enabled, pomodoro_work_minutes, pomodoro_break_minutes]
+
+    DashboardAnalytics:
+      type: object
+      properties:
+        total_tasks:
+          type: integer
+        completed_tasks:
+          type: integer
+        completion_rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        priority_distribution:
+          type: object
+          properties:
+            high:
+              type: integer
+            medium:
+              type: integer
+            low:
+              type: integer
+            none:
+              type: integer
+        completion_trend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+        category_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              tag_name:
+                type: string
+              task_count:
+                type: integer
+              color:
+                type: string
+        current_streak:
+          type: integer
+        average_completion_time:
+          type: number
+          format: float
+          description: Average time_spent in minutes for completed tasks
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation error"
+        message:
+          type: string
+          example: "Title must be between 1 and 200 characters"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        field:
+          type: string
+          nullable: true
+          example: "title"
+      required: [error, message, code]
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or validation errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or expired JWT token"
+            code: "AUTH_ERROR"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not found"
+            message: "Task with id 550e8400... not found"
+            code: "NOT_FOUND"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded (100 requests/minute per user)
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retry
+          example: 60
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit per minute
+          example: 100
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests in current window
+          example: 0
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+          example: 1704326400
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Rate limit exceeded"
+            message: "Too many requests. Please wait 60 seconds."
+            code: "RATE_LIMIT_EXCEEDED"
