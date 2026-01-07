@@ -49,6 +49,7 @@ class User(SQLModel, table=True):
     settings: Optional["UserSettings"] = Relationship(back_populates="user")
 
 
+
 class UserPublic(SQLModel):
     """Public user data (no password_hash) for API responses."""
 
