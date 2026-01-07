@@ -16,7 +16,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
-from .db.session import engine
+from .config.database import engine
+from .config.settings import settings
 
 # Load environment variables
 try:
@@ -43,7 +44,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager - creates database tables on startup."""
     try:
         # Create database tables
-        SQLModel.metadata.create_all(engine)
+        SQLModel.metadata.create_all(bind=engine)
         print("✅ Database initialized successfully")
     except Exception as e:
         print(f"⚠️  Database initialization warning: {str(e)}")
@@ -56,31 +57,16 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI application
 app = FastAPI(
-    title="AIDO Todo API",
-    description="Phase 2: Web API with JWT Authentication for todo task management",
-    version="2.0.0",
+    title=settings.project_name,
+    description="AIDO API - Complete Web API layer for task management",
+    version=settings.version,
     lifespan=lifespan,
 )
 
 # Configure CORS for frontend access
-# IMPORTANT: CORS origins are domain-based, NOT including path components
-# Path routing happens client-side in browsers
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-allow_origins = [
-    frontend_url,
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "https://razaib-khan.github.io",  # GitHub Pages (domain only, no path)
-    "https://razaib123-aido-todo-api.hf.space",  # HF Spaces backend (for testing)
-]
-
-# Allow all origins from HF Spaces domain pattern
-allow_origins_regex = r"https://razaib123-aido-todo-api\.hf\.space.*"
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_origin_regex=allow_origins_regex,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -128,23 +114,17 @@ async def health_check():
 
 
 # Import and include routers
-from .api.auth import router as auth_router
-from .api.tasks import router as tasks_router
-from .routers.tags import router as tags_router
-from .routers.subtasks import router as subtasks_router
-from .routers.settings import router as settings_router
-from .routers.analytics import router as analytics_router
-from .routers.export import router as export_router
-from .routers.search import router as search_router
+from .api.auth_router import router as auth_router
+from .api.user_router import router as user_router
+from .api.project_router import router as project_router
+from .api.task_router import router as task_router
+from .api.dashboard_router import router as dashboard_router
 
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
-app.include_router(tags_router, prefix="/api")
-app.include_router(subtasks_router, prefix="/api")
-app.include_router(settings_router, prefix="/api")
-app.include_router(analytics_router, prefix="/api")
-app.include_router(export_router, prefix="/api")
-app.include_router(search_router, prefix="/api")
+app.include_router(auth_router, prefix=settings.api_v1_str, tags=["Authentication"])
+app.include_router(user_router, prefix=settings.api_v1_str, tags=["Users"])
+app.include_router(project_router, prefix=settings.api_v1_str, tags=["Projects"])
+app.include_router(task_router, prefix=settings.api_v1_str, tags=["Tasks"])
+app.include_router(dashboard_router, prefix=settings.api_v1_str, tags=["Dashboard"])
 
 
 # Development entry point
