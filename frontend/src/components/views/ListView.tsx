@@ -42,8 +42,8 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
 
   // Fetch tasks on mount and when filters change
   useEffect(() => {
-    fetchTasks(userId, filters)
-  }, [userId, filters, fetchTasks])
+    fetchTasks(filters)
+  }, [filters, fetchTasks])
 
   // Sort tasks
   const sortTasks = (tasksToSort: Task[]): Task[] => {
@@ -134,11 +134,11 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
   }
 
   const handleToggleCompleteForTaskCard = (taskId: string) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   const handleToggleComplete = (taskId: string, completed: boolean) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   if (error) {
@@ -146,7 +146,7 @@ export function ListView({ userId, onTaskClick }: ListViewProps) {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-red-600 mb-4">Failed to load tasks</p>
         <button
-          onClick={() => fetchTasks(userId, filters)}
+          onClick={() => fetchTasks(filters)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
           Retry

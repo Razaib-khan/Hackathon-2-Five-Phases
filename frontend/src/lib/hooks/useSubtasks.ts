@@ -29,12 +29,12 @@ export interface Subtask {
 interface UseSubtasksReturn {
   createSubtask: (
     taskId: string,
-    data: api.SubtaskCreateData,
+    data: any,
     currentCount?: number
   ) => Promise<Subtask | null>
   updateSubtask: (
     subtaskId: string,
-    data: api.SubtaskUpdateData
+    data: any
   ) => Promise<Subtask | null>
   deleteSubtask: (subtaskId: string) => Promise<boolean>
 }
@@ -43,7 +43,7 @@ export function useSubtasks(): UseSubtasksReturn {
   const createSubtask = useCallback(
     async (
       taskId: string,
-      data: api.SubtaskCreateData,
+      data: any,
       currentCount: number = 0
     ): Promise<Subtask | null> => {
       // Check 50 subtask limit (FR-106)
@@ -79,7 +79,7 @@ export function useSubtasks(): UseSubtasksReturn {
   const updateSubtask = useCallback(
     async (
       subtaskId: string,
-      data: api.SubtaskUpdateData
+      data: any
     ): Promise<Subtask | null> => {
       try {
         const updatedSubtask = await api.updateSubtask(subtaskId, data)

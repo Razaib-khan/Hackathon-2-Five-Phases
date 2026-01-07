@@ -24,7 +24,7 @@ export interface Task {
   title: string;
   description?: string;
   completed: boolean;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | 'none';
   due_date?: string;
   created_at: string;
   updated_at: string;
