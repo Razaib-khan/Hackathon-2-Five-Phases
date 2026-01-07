@@ -22,8 +22,27 @@ export interface Task {
   id: string;
   user_id: string;
   title: string;
-  description: string | null;
+  description?: string;
   completed: boolean;
+  priority: 'high' | 'medium' | 'low';
+  due_date?: string;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  estimated_time?: number;
+  tags?: string[];
+  subtasks?: Subtask[];
+  category?: string;
+  position?: number;
+  reminder_time?: string;
+}
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  completed: boolean;
+  order_index: number;
   created_at: string;
   updated_at: string;
 }
@@ -31,8 +50,8 @@ export interface Task {
 export interface TaskListResponse {
   tasks: Task[];
   total: number;
-  page: number;
-  page_size: number;
+  page?: number;
+  limit?: number;
 }
 
 export interface TaskCreateRequest {

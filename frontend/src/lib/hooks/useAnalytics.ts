@@ -54,7 +54,7 @@ export function useAnalytics(): UseAnalyticsReturn {
     setIsLoadingStreak(true)
     setError(null)
     try {
-      const streakData = await api.getStreak()
+      const streakData = await api.getStreakData()
       setStreak(streakData)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch streak')

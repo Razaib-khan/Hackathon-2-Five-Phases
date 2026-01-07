@@ -66,7 +66,7 @@ export default function TasksPage() {
     setError('');
 
     try {
-      const response = await getTasks(user.id, filters);
+      const response = await getTasks(filters);
       setTasks(response.tasks);
       setTotal(response.total);
     } catch (err) {
@@ -83,12 +83,12 @@ export default function TasksPage() {
   }, [user, fetchTasks]);
 
   // Create task
-  const handleCreate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
+  const handleCreate = async (data: TaskCreateRequest) => {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
-      await createTask(user.id, data);
+      await createTask(data);
       setShowCreateModal(false);
       fetchTasks();
     } finally {
@@ -97,12 +97,12 @@ export default function TasksPage() {
   };
 
   // Update task
-  const handleUpdate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
-    if (!user || !editingTask) return;
+  const handleUpdate = async (data: TaskUpdateRequest) => {
+    if (!editingTask) return;
 
     setIsSubmitting(true);
     try {
-      await updateTask(user.id, editingTask.id, data);
+      await updateTask(editingTask.id, data);
       setEditingTask(null);
       fetchTasks();
     } finally {
@@ -112,10 +112,8 @@ export default function TasksPage() {
 
   // Toggle completion
   const handleToggleComplete = async (task: Task) => {
-    if (!user) return;
-
     try {
-      const updated = await toggleTaskComplete(user.id, task.id);
+      const updated = await toggleTaskComplete(task.id, !task.completed);
       setTasks((prev) =>
         prev.map((t) => (t.id === updated.id ? updated : t))
       );
@@ -126,10 +124,10 @@ export default function TasksPage() {
 
   // Delete task
   const handleDelete = async () => {
-    if (!user || !deletingTask) return;
+    if (!deletingTask) return;
 
     try {
-      await deleteTask(user.id, deletingTask.id);
+      await deleteTask(deletingTask.id);
       setDeletingTask(null);
       fetchTasks();
     } catch (err) {
@@ -262,7 +260,12 @@ export default function TasksPage() {
       >
         {editingTask && (
           <TaskForm
-            task={editingTask}
+            initialData={{
+              title: editingTask.title,
+              priority: editingTask.priority,
+              description: editingTask.description || '',
+              dueDate: editingTask.due_date || ''
+            }}
             onSubmit={handleUpdate}
             onCancel={() => setEditingTask(null)}
             isSubmitting={isSubmitting}

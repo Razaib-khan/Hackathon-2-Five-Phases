@@ -98,19 +98,19 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
       tag_ids: selectedTagIds,
     }
 
-    const updated = await updateTask(userId, task.id, updates)
+    const updated = await updateTask(task.id, updates)
 
     setIsSaving(false)
 
     if (updated) {
       setIsEditing(false)
       // Refresh to get updated data with tags
-      fetchTasks(userId, {})
+      fetchTasks({})
     }
   }
 
   const handleDelete = async () => {
-    const success = await deleteTask(userId, task.id)
+    const success = await deleteTask(task.id)
     if (success) {
       onClose()
     }
@@ -388,7 +388,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
               <SubtaskList
                 taskId={task.id}
                 subtasks={task.subtasks || []}
-                onUpdate={() => fetchTasks(userId, {})}
+                onUpdate={() => fetchTasks({})}
               />
             </div>
           )}

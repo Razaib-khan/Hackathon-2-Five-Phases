@@ -88,7 +88,7 @@ export async function logout() {
 }
 
 // Task API functions
-export async function getTasks(userId: string, filters?: TaskFilterOptions): Promise<TaskListResponse> {
+export async function getTasks(filters?: TaskFilterOptions): Promise<TaskListResponse> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -98,7 +98,7 @@ export async function getTasks(userId: string, filters?: TaskFilterOptions): Pro
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/users/${userId}/tasks${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/api/tasks${queryString ? `?${queryString}` : ''}`
   return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
 }
 
@@ -117,9 +117,9 @@ export async function updateTask(taskId: string, data: TaskUpdateRequest): Promi
 }
 
 export async function toggleTaskComplete(taskId: string, completed?: boolean): Promise<any> {
-  return apiCall<any>(`/api/tasks/${taskId}/complete`, {
+  return apiCall<any>(`/api/tasks/${taskId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ completed: completed ?? true }),
+    body: JSON.stringify({ status: completed ? 'done' : 'todo' }),
   })
 }
 
@@ -127,8 +127,27 @@ export async function deleteTask(taskId: string): Promise<any> {
   return apiCall<any>(`/api/tasks/${taskId}`, { method: 'DELETE' })
 }
 
+// Subtask API functions
+export async function createSubtask(taskId: string, data: any): Promise<any> {
+  return apiCall<any>(`/api/tasks/${taskId}/subtasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSubtask(subtaskId: string, data: any): Promise<any> {
+  return apiCall<any>(`/api/subtasks/${subtaskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteSubtask(subtaskId: string): Promise<any> {
+  return apiCall<any>(`/api/subtasks/${subtaskId}`, { method: 'DELETE' })
+}
+
 // Tag API functions
-export async function getTags(userId: string, filters?: any): Promise<TagListResponse> {
+export async function getTags(filters?: any): Promise<TagListResponse> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -138,7 +157,7 @@ export async function getTags(userId: string, filters?: any): Promise<TagListRes
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/users/${userId}/tags${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/api/tags${queryString ? `?${queryString}` : ''}`
   return apiCall<TagListResponse>(endpoint, { method: 'GET' })
 }
 
@@ -203,12 +222,24 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdateRe
 }
 
 // User Settings API functions
-export async function getUserSettings(): Promise<any> {
-  return apiCall<any>('/api/user/settings', { method: 'GET' });
+export async function getUserSettings(): Promise<UserSettings> {
+  return apiCall<UserSettings>('/api/user/settings', { method: 'GET' });
 }
 
-export async function updateUserSettings(data: any): Promise<any> {
-  return apiCall<any>('/api/user/settings', {
+export async function updateUserSettings(data: UserSettingsUpdateData): Promise<UserSettings> {
+  return apiCall<UserSettings>('/api/user/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  });
+}
+
+// Settings API functions (aliases for useSettings hook)
+export async function getSettings(): Promise<UserSettings> {
+  return getUserSettings();
+}
+
+export async function updateSettings(data: UserSettingsUpdateData): Promise<UserSettings> {
+  return apiCall<UserSettings>('/api/user/settings', {
     method: 'PATCH',
     body: JSON.stringify(data)
   });
@@ -220,6 +251,94 @@ export async function checkHealth() {
   } catch {
     return { status: 'offline', database: 'disconnected' }
   }
+}
+
+// Analytics types
+export interface PriorityDistribution {
+  high: number;
+  medium: number;
+  low: number;
+  none: number;
+}
+
+export interface CategoryBreakdownEntry {
+  tag_name: string;
+  tag_color: string;
+  task_count: number;
+  completed_count: number;
+}
+
+export interface DashboardAnalytics {
+  total_users: number;
+  total_tasks: number;
+  tasks_completed_today: number;
+  active_projects: number;
+  my_tasks: number;
+  tasks_assigned_to_me: number;
+  my_projects: number;
+  overdue_tasks: number;
+  completed_tasks: number;
+  due_today: number;
+  completion_trend: any[];
+  priority_distribution: PriorityDistribution;
+  category_breakdown: CategoryBreakdownEntry[];
+  total_time_spent: number;
+  average_completion_time: number;
+}
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  completed: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubtaskCreateData {
+  title: string;
+  order_index?: number;
+}
+
+export interface SubtaskUpdateData {
+  title?: string;
+  completed?: boolean;
+  order_index?: number;
+}
+
+
+// Tag types - extending from models
+export interface TagCreateData extends TagCreateRequest {}
+export interface TagUpdateData extends TagUpdateRequest {}
+
+export interface StreakData {
+  current_streak: number;
+  longest_streak: number;
+  streak_break_date?: string;
+}
+
+// Settings types
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  theme: 'light' | 'dark' | 'system';
+  language: string;
+  timezone: string;
+  notifications_enabled: boolean;
+  email_notifications: boolean;
+  task_reminders: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettingsUpdateData {
+  theme?: 'light' | 'dark' | 'system';
+  language?: string;
+  timezone?: string;
+  notifications_enabled?: boolean;
+  email_notifications?: boolean;
+  task_reminders?: boolean;
 }
 
 export async function getStoredUser() {
