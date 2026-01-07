@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -27,7 +27,8 @@ class TaskBase(BaseModel):
     project_id: Optional[int] = None
     due_date: Optional[datetime] = None
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         if not v or len(v) < 1 or len(v) > 200:
             raise ValueError('Title must be between 1 and 200 characters')
@@ -49,7 +50,8 @@ class TaskUpdate(BaseModel):
     project_id: Optional[int] = None
     due_date: Optional[datetime] = None
 
-    @validator('title')
+    @field_validator('title')
+    @classmethod
     def validate_title(cls, v):
         if v is not None and (len(v) < 1 or len(v) > 200):
             raise ValueError('Title must be between 1 and 200 characters')
