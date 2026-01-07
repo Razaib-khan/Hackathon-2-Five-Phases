@@ -1,0 +1,12 @@
+/* CreateTask Page Styles */
+.create-task-container {
+  @apply p-6 max-w-2xl mx-auto;
+}
+
+.create-task-header {
+  @apply text-2xl font-bold mb-4;
+}
+
+.create-task-form {
+  @apply space-y-4;
+}

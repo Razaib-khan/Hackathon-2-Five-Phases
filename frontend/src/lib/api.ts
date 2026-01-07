@@ -260,5 +260,29 @@ export interface TagUpdateData {
   color?: string
 }
 
+// Subtask API functions
+export async function createSubtask(taskId: string, data: any): Promise<any> {
+  return apiCall<any>(`/api/tasks/${taskId}/subtasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSubtask(subtaskId: string, data: any): Promise<any> {
+  return apiCall<any>(`/api/subtasks/${subtaskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteSubtask(subtaskId: string): Promise<any> {
+  return apiCall<any>(`/api/subtasks/${subtaskId}`, { method: 'DELETE' })
+}
+
+// Streak API function
+export async function getStreak() {
+  return apiCall('/api/analytics/streak', { method: 'GET' })
+}
+
 
 
