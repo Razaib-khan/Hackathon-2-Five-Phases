@@ -14,13 +14,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import {
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-  toggleTaskComplete,
-} from '@/lib/api';
+import { useTasks } from '@/lib/hooks/useTasks';
+import { getTasks } from '@/lib/api';
 import { TaskList, TaskForm, TaskFiltersComponent, Modal } from '@/components';
 import type { Task, TaskFilters, TaskCreateRequest, TaskUpdateRequest } from '@/types';
 import AppLogo from '@/components/AppLogo';
@@ -28,12 +23,23 @@ import AppLogo from '@/components/AppLogo';
 export default function TasksPage() {
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const { tasks: hookTasks, total: hookTotal, isLoading: hookLoading, error: hookError, fetchTasks: hookFetchTasks, createTask, updateTask, deleteTask, toggleComplete } = useTasks();
 
   // Task state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Sync hook state to local state
+  useEffect(() => {
+    setTasks(hookTasks);
+    setTotal(hookTotal);
+    if (hookError) {
+      setError(hookError.message || 'An error occurred');
+    }
+    setIsLoading(hookLoading);
+  }, [hookTasks, hookTotal, hookLoading, hookError]);
 
   // Filter state
   const [filters, setFilters] = useState<TaskFilters>({
@@ -62,19 +68,12 @@ export default function TasksPage() {
   const fetchTasks = useCallback(async () => {
     if (!user) return;
 
-    setIsLoading(true);
-    setError('');
-
     try {
-      const response = await getTasks(user.id, filters);
-      setTasks(response.tasks);
-      setTotal(response.total);
+      await hookFetchTasks(filters);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tasks');
-    } finally {
-      setIsLoading(false);
     }
-  }, [user, filters]);
+  }, [user, hookFetchTasks, filters]);
 
   useEffect(() => {
     if (user) {
@@ -83,12 +82,12 @@ export default function TasksPage() {
   }, [user, fetchTasks]);
 
   // Create task
-  const handleCreate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
+  const handleCreate = async (data: TaskCreateRequest) => {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
-      await createTask(user.id, data);
+      await createTask(data);
       setShowCreateModal(false);
       fetchTasks();
     } finally {
@@ -97,12 +96,12 @@ export default function TasksPage() {
   };
 
   // Update task
-  const handleUpdate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
+  const handleUpdate = async (data: TaskUpdateRequest) => {
     if (!user || !editingTask) return;
 
     setIsSubmitting(true);
     try {
-      await updateTask(user.id, editingTask.id, data);
+      await updateTask(editingTask.id, data);
       setEditingTask(null);
       fetchTasks();
     } finally {
@@ -115,10 +114,14 @@ export default function TasksPage() {
     if (!user) return;
 
     try {
-      const updated = await toggleTaskComplete(user.id, task.id);
-      setTasks((prev) =>
-        prev.map((t) => (t.id === updated.id ? updated : t))
-      );
+      const success = await toggleComplete(task.id);
+      if (success) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id ? { ...t, completed: !t.completed } : t
+          )
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update task');
     }
@@ -129,9 +132,11 @@ export default function TasksPage() {
     if (!user || !deletingTask) return;
 
     try {
-      await deleteTask(user.id, deletingTask.id);
-      setDeletingTask(null);
-      fetchTasks();
+      const success = await deleteTask(deletingTask.id);
+      if (success) {
+        setDeletingTask(null);
+        fetchTasks();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete task');
     }
@@ -248,7 +253,7 @@ export default function TasksPage() {
         title="Create Task"
       >
         <TaskForm
-          onSubmit={handleCreate}
+          onSubmit={handleCreate as (data: TaskCreateRequest | TaskUpdateRequest) => Promise<void>}
           onCancel={() => setShowCreateModal(false)}
           isSubmitting={isSubmitting}
         />
@@ -263,7 +268,7 @@ export default function TasksPage() {
         {editingTask && (
           <TaskForm
             task={editingTask}
-            onSubmit={handleUpdate}
+            onSubmit={handleUpdate as (data: TaskCreateRequest | TaskUpdateRequest) => Promise<void>}
             onCancel={() => setEditingTask(null)}
             isSubmitting={isSubmitting}
           />

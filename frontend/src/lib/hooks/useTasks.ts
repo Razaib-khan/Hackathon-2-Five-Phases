@@ -45,11 +45,11 @@ interface UseTasksReturn {
   total: number
   isLoading: boolean
   error: Error | null
-  fetchTasks: (userId: string, filters?: any) => Promise<void>
-  createTask: (userId: string, data: any) => Promise<Task | null>
-  updateTask: (userId: string, taskId: string, data: any) => Promise<Task | null>
-  deleteTask: (userId: string, taskId: string) => Promise<boolean>
-  toggleComplete: (userId: string, taskId: string) => Promise<boolean>
+  fetchTasks: (filters?: any) => Promise<void>
+  createTask: (data: any) => Promise<Task | null>
+  updateTask: (taskId: string, data: any) => Promise<Task | null>
+  deleteTask: (taskId: string) => Promise<boolean>
+  toggleComplete: (taskId: string) => Promise<boolean>
 }
 
 export function useTasks(): UseTasksReturn {
@@ -58,11 +58,11 @@ export function useTasks(): UseTasksReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const fetchTasks = useCallback(async (userId: string, filters?: any) => {
+  const fetchTasks = useCallback(async (filters?: any) => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.getTasks(userId, filters)
+      const response = await api.getTasks(filters)
       setTasks(response.tasks as Task[])
       setTotal(response.total)
     } catch (err) {
@@ -74,9 +74,9 @@ export function useTasks(): UseTasksReturn {
     }
   }, [])
 
-  const createTask = useCallback(async (userId: string, data: any): Promise<Task | null> => {
+  const createTask = useCallback(async (data: any): Promise<Task | null> => {
     try {
-      const newTask = await api.createTask(userId, data)
+      const newTask = await api.createTask(data)
 
       // Optimistic update
       setTasks((prev) => [newTask as Task, ...prev])
@@ -93,7 +93,7 @@ export function useTasks(): UseTasksReturn {
   }, [])
 
   const updateTask = useCallback(
-    async (userId: string, taskId: string, data: any): Promise<Task | null> => {
+    async (taskId: string, data: any): Promise<Task | null> => {
       // Store original task for rollback
       const originalTask = tasks.find((t) => t.id === taskId)
 
@@ -103,7 +103,7 @@ export function useTasks(): UseTasksReturn {
           prev.map((t) => (t.id === taskId ? { ...t, ...data } : t))
         )
 
-        const updatedTask = await api.updateTask(userId, taskId, data)
+        const updatedTask = await api.updateTask(taskId, data)
 
         // Update with server response
         setTasks((prev) =>
@@ -140,7 +140,7 @@ export function useTasks(): UseTasksReturn {
   )
 
   const deleteTask = useCallback(
-    async (userId: string, taskId: string): Promise<boolean> => {
+    async (taskId: string): Promise<boolean> => {
       // Store original tasks for rollback
       const originalTasks = [...tasks]
 
@@ -149,7 +149,7 @@ export function useTasks(): UseTasksReturn {
         setTasks((prev) => prev.filter((t) => t.id !== taskId))
         setTotal((prev) => prev - 1)
 
-        await api.deleteTask(userId, taskId)
+        await api.deleteTask(taskId)
 
         toast.success('Task deleted')
         return true
@@ -167,7 +167,7 @@ export function useTasks(): UseTasksReturn {
   )
 
   const toggleComplete = useCallback(
-    async (userId: string, taskId: string): Promise<boolean> => {
+    async (taskId: string): Promise<boolean> => {
       const task = tasks.find((t) => t.id === taskId)
       if (!task) return false
 
@@ -184,7 +184,7 @@ export function useTasks(): UseTasksReturn {
           )
         )
 
-        await api.toggleTaskComplete(userId, taskId, newCompleted)
+        await api.toggleTaskComplete(taskId, newCompleted)
 
         return true
       } catch (err) {

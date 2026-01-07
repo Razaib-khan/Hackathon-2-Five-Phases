@@ -81,8 +81,8 @@ export function MatrixView({ userId, onTaskClick }: MatrixViewProps) {
 
   // Fetch tasks on mount and when filters change
   useEffect(() => {
-    fetchTasks(userId, filters)
-  }, [userId, filters, fetchTasks])
+    fetchTasks(filters)
+  }, [filters, fetchTasks])
 
   // Determine if task is urgent (due within 3 days or high priority)
   const isUrgent = (task: Task): boolean => {
@@ -133,11 +133,11 @@ export function MatrixView({ userId, onTaskClick }: MatrixViewProps) {
   }
 
   const handleToggleCompleteForTaskCard = (taskId: string) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   const handleToggleComplete = (taskId: string, completed: boolean) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   if (error) {
@@ -145,7 +145,7 @@ export function MatrixView({ userId, onTaskClick }: MatrixViewProps) {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-red-600 dark:text-red-400 mb-4">Failed to load tasks</p>
         <button
-          onClick={() => fetchTasks(userId, filters)}
+          onClick={() => fetchTasks(filters)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
           Retry

@@ -88,7 +88,7 @@ export async function logout() {
 }
 
 // Task API functions
-export async function getTasks(userId: string, filters?: TaskFilterOptions): Promise<TaskListResponse> {
+export async function getTasks(filters?: TaskFilterOptions): Promise<TaskListResponse> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -98,7 +98,7 @@ export async function getTasks(userId: string, filters?: TaskFilterOptions): Pro
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/users/${userId}/tasks${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/api/tasks${queryString ? `?${queryString}` : ''}`
   return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
 }
 
@@ -128,7 +128,7 @@ export async function deleteTask(taskId: string): Promise<any> {
 }
 
 // Tag API functions
-export async function getTags(userId: string, filters?: any): Promise<TagListResponse> {
+export async function getTags(filters?: any): Promise<TagListResponse> {
   const queryParams = new URLSearchParams()
   if (filters) {
     Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
@@ -138,7 +138,7 @@ export async function getTags(userId: string, filters?: any): Promise<TagListRes
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/users/${userId}/tags${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/api/tags${queryString ? `?${queryString}` : ''}`
   return apiCall<TagListResponse>(endpoint, { method: 'GET' })
 }
 

@@ -84,7 +84,7 @@ export function TimeTracker({ taskId, userId, currentTimeSpent, onUpdate }: Time
 
     if (minutesToAdd > 0) {
       const newTimeSpent = currentTimeSpent + minutesToAdd
-      await updateTask(userId, taskId, { time_spent: newTimeSpent })
+      await updateTask(taskId, { time_spent: newTimeSpent })
       onUpdate()
     }
 
@@ -96,7 +96,7 @@ export function TimeTracker({ taskId, userId, currentTimeSpent, onUpdate }: Time
 
     if (totalMinutes > 0) {
       const newTimeSpent = currentTimeSpent + totalMinutes
-      await updateTask(userId, taskId, { time_spent: newTimeSpent })
+      await updateTask(taskId, { time_spent: newTimeSpent })
       onUpdate()
 
       // Reset manual entry
@@ -108,7 +108,7 @@ export function TimeTracker({ taskId, userId, currentTimeSpent, onUpdate }: Time
 
   const handleReset = async () => {
     if (confirm('Reset time spent to 0? This action cannot be undone.')) {
-      await updateTask(userId, taskId, { time_spent: 0 })
+      await updateTask(taskId, { time_spent: 0 })
       onUpdate()
     }
   }

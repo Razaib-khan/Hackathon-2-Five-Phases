@@ -108,8 +108,8 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
 
   // Fetch tasks on mount and when filters change
   useEffect(() => {
-    fetchTasks(userId, filters)
-  }, [userId, filters, fetchTasks])
+    fetchTasks(filters)
+  }, [filters, fetchTasks])
 
   // Group tasks by status
   const tasksByStatus: Record<StatusColumn, Task[]> = {
@@ -138,16 +138,16 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
     if (!task || task.status === newStatus) return
 
     // Update task status
-    await updateTask(userId, taskId, { status: newStatus })
+    await updateTask(taskId, { status: newStatus })
 
     // If moving to "done", mark as completed
     if (newStatus === 'done' && !task.completed) {
-      await updateTask(userId, taskId, { completed: true })
+      await updateTask(taskId, { completed: true })
     }
 
     // If moving away from "done", mark as incomplete
     if (task.status === 'done' && newStatus !== 'done' && task.completed) {
-      await updateTask(userId, taskId, { completed: false })
+      await updateTask(taskId, { completed: false })
     }
   }
 
@@ -158,11 +158,11 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
   }
 
   const handleToggleComplete = (taskId: string, completed: boolean) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   const handleToggleCompleteForTaskCard = (taskId: string) => {
-    toggleComplete(userId, taskId)
+    toggleComplete(taskId)
   }
 
   if (error) {
@@ -170,7 +170,7 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-red-600 dark:text-red-400 mb-4">Failed to load tasks</p>
         <button
-          onClick={() => fetchTasks(userId, filters)}
+          onClick={() => fetchTasks(filters)}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
         >
           Retry
