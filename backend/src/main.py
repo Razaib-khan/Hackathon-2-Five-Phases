@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager - creates database tables on startup."""
     try:
         # Create database tables
-        SQLModel.metadata.create_all(engine)
+        SQLModel.metadata.create_all(bind=engine)
         print("✅ Database initialized successfully")
     except Exception as e:
         print(f"⚠️  Database initialization warning: {str(e)}")
@@ -64,24 +64,9 @@ app = FastAPI(
 )
 
 # Configure CORS for frontend access
-# IMPORTANT: CORS origins are domain-based, NOT including path components
-# Path routing happens client-side in browsers
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-allow_origins = [
-    frontend_url,
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "https://razaib-khan.github.io",  # GitHub Pages (domain only, no path)
-    "https://razaib123-aido-todo-api.hf.space",  # HF Spaces backend (for testing)
-]
-
-# Allow all origins from HF Spaces domain pattern
-allow_origins_regex = r"https://razaib123-aido-todo-api\.hf\.space.*"
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_origin_regex=allow_origins_regex,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
