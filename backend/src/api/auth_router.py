@@ -31,14 +31,25 @@ async def register_user(
     """
     try:
         user = AuthService.register_user(session, user_data)
-        return UserResponse.model_validate(user)
+        # Create UserResponse from user object manually to avoid validation issues
+        return UserResponse(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            is_active=user.is_active,
+            is_verified=user.is_verified,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during registration"
+            detail=f"An error occurred during registration: {str(e)}"
         )
 
 

@@ -13,7 +13,7 @@ Security:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from ..config.database import get_session
 from ..models.user import User
@@ -131,7 +131,8 @@ async def login(
         HTTPException 401: Invalid email or password
     """
     # Find user by email
-    user = db.query(User).filter(User.email == request.email).first()
+    statement = select(User).where(User.email == request.email)
+    user = db.exec(statement).first()
 
     if not user:
         raise HTTPException(
