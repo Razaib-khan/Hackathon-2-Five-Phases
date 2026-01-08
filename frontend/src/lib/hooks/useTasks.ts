@@ -19,25 +19,34 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import * as api from '../api'
 
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  completed: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
-  id: string
-  user_id: string
+  id: number // Backend uses integer IDs, not strings
+  created_by: number // Backend uses 'created_by', not 'user_id'
   title: string
   description?: string
-  completed: boolean
-  priority: 'high' | 'medium' | 'low' | 'none'
-  due_date?: string
-  status: 'todo' | 'in_progress' | 'done'
-  time_spent: number
-  custom_order?: number
-  recurrence_pattern?: any
-  version: number
-  tags?: any[]
-  subtasks?: any[]
-  subtask_count?: number
-  completed_subtask_count?: number
-  created_at: string
-  updated_at: string
+  priority: 'low' | 'medium' | 'high' | 'urgent' // Backend has 4 priority levels
+  status: 'todo' | 'in_progress' | 'done' | 'blocked' // Backend uses status enum, not completed boolean
+  assigned_to?: number
+  project_id?: number
+  due_date?: string // ISO 8601 date string
+  created_at: string // ISO 8601 date string
+  updated_at: string // ISO 8601 date string
+  estimated_time?: number // in minutes
+  tags?: string[] // array of tag IDs
+  subtasks?: Subtask[]
+  category?: string
+  position?: number // for ordering tasks
+  reminder_time?: string
 }
 
 interface UseTasksReturn {
@@ -171,7 +180,8 @@ export function useTasks(): UseTasksReturn {
       const task = tasks.find((t) => t.id === taskId)
       if (!task) return false
 
-      const newCompleted = !task.completed
+      // Toggle status between 'todo' and 'done' based on current status
+      const newStatus = task.status === 'done' ? 'todo' : 'done'
 
       // Store original for rollback
       const originalTask = { ...task }
@@ -180,11 +190,11 @@ export function useTasks(): UseTasksReturn {
         // Optimistic update
         setTasks((prev) =>
           prev.map((t) =>
-            t.id === taskId ? { ...t, completed: newCompleted } : t
+            t.id === taskId ? { ...t, status: newStatus } : t
           )
         )
 
-        await api.toggleTaskComplete(taskId, newCompleted)
+        await api.toggleTaskComplete(taskId, newStatus === 'done')
 
         return true
       } catch (err) {

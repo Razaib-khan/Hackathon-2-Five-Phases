@@ -19,21 +19,22 @@ export interface AuthResponse {
 
 // Task types
 export interface Task {
-  id: string;
-  user_id: string;
+  id: number; // Backend uses integer IDs, not strings
+  created_by: number; // Backend uses 'created_by', not 'user_id'
   title: string;
   description?: string;
-  completed: boolean;
-  priority: 'high' | 'medium' | 'low' | 'none';
-  due_date?: string;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string;
-  estimated_time?: number;
-  tags?: string[];
+  priority: 'low' | 'medium' | 'high' | 'urgent'; // Backend has 4 priority levels
+  status: 'todo' | 'in_progress' | 'done' | 'blocked'; // Backend uses status enum, not completed boolean
+  assigned_to?: number;
+  project_id?: number;
+  due_date?: string; // ISO 8601 date string
+  created_at: string; // ISO 8601 date string
+  updated_at: string; // ISO 8601 date string
+  estimated_time?: number; // in minutes
+  tags?: string[]; // array of tag IDs
   subtasks?: Subtask[];
   category?: string;
-  position?: number;
+  position?: number; // for ordering tasks
   reminder_time?: string;
 }
 
@@ -57,12 +58,31 @@ export interface TaskListResponse {
 export interface TaskCreateRequest {
   title: string;
   description?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent'; // Backend has 4 priority levels
+  status?: 'todo' | 'in_progress' | 'done' | 'blocked'; // Backend uses status enum
+  assigned_to?: number;
+  project_id?: number;
+  due_date?: string; // ISO 8601 date string
+  estimated_time?: number; // in minutes
+  tags?: string[]; // array of tag IDs
+  category?: string;
+  position?: number; // for ordering tasks
+  reminder_time?: string;
 }
 
 export interface TaskUpdateRequest {
   title?: string;
   description?: string;
-  completed?: boolean;
+  priority?: 'low' | 'medium' | 'high' | 'urgent'; // Backend has 4 priority levels
+  status?: 'todo' | 'in_progress' | 'done' | 'blocked'; // Backend uses status enum
+  assigned_to?: number;
+  project_id?: number;
+  due_date?: string; // ISO 8601 date string
+  estimated_time?: number; // in minutes
+  tags?: string[]; // array of tag IDs
+  category?: string;
+  position?: number; // for ordering tasks
+  reminder_time?: string;
 }
 
 // API Error
@@ -84,9 +104,9 @@ export interface RegisterFormData {
 
 // Task filters
 export interface TaskFilters {
-  completed?: boolean;
+  status?: 'todo' | 'in_progress' | 'done' | 'blocked';
   search?: string;
-  sort_by?: 'created_at' | 'title' | 'completed';
+  sort_by?: 'created_at' | 'title' | 'status';
   sort_order?: 'asc' | 'desc';
   page?: number;
   page_size?: number;

@@ -113,12 +113,15 @@ export default function TasksPage() {
   const handleToggleComplete = async (task: Task) => {
     if (!user) return;
 
+    // Toggle status between 'todo' and 'done' based on current status
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+
     try {
       const success = await toggleComplete(task.id);
       if (success) {
         setTasks((prev) =>
           prev.map((t) =>
-            t.id === task.id ? { ...t, completed: !t.completed } : t
+            t.id === task.id ? { ...t, status: newStatus } : t
           )
         );
       }
