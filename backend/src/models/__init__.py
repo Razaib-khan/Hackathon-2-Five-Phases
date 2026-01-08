@@ -19,5 +19,6 @@ from .task_tag import TaskTag
 from .subtask import Subtask
 from .user_settings import UserSettings
 from .role import Role, UserRoleLink
+from .project import Project
 
-__all__ = ["User", "Task", "Tag", "TaskTag", "Subtask", "UserSettings", "Role", "UserRoleLink"]
+__all__ = ["User", "Task", "Tag", "TaskTag", "Subtask", "UserSettings", "Role", "UserRoleLink", "Project"]

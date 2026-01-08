@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from .tag import Tag
     from .user_settings import UserSettings
     from .role import Role, UserRoleLink
+    from .project import Project
 
 
 # Import after TYPE_CHECKING to avoid circular import during definition
@@ -58,6 +59,7 @@ class User(SQLModel, table=True):
     )
     roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)
     settings: Optional["UserSettings"] = Relationship(back_populates="user")
+    owned_projects: List["Project"] = Relationship(back_populates="owner", sa_relationship_kwargs={"foreign_keys": "[Project.owner_id]"})
 
 
 
