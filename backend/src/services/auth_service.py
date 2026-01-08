@@ -27,7 +27,7 @@ class AuthService:
             User object if authentication is successful, None otherwise
         """
         user = session.exec(select(User).where(User.username == username)).first()
-        if not user or not verify_password(password, user.hashed_password):
+        if not user or not verify_password(password, user.password_hash):
             return None
         return user
 
@@ -179,7 +179,7 @@ class AuthService:
                 detail=error_msg
             )
 
-        user.hashed_password = get_password_hash(new_password)
+        user.password_hash = get_password_hash(new_password)
         session.add(user)
         session.commit()
         session.refresh(user)
