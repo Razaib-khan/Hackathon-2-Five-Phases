@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from ..models.user import User
 from ..utils.auth import verify_password, get_password_hash, create_access_token, create_refresh_token
 from ..models.schemas.user import UserCreate
@@ -75,45 +76,58 @@ class AuthService:
         Raises:
             HTTPException: If username or email already exists
         """
-        # Check if username already exists
-        existing_user = session.exec(select(User).where(User.username == user_data.username)).first()
-        if existing_user:
+        try:
+            # Check if username already exists
+            existing_user = session.exec(select(User).where(User.username == user_data.username)).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Username already registered"
+                )
+
+            # Check if email already exists
+            existing_email = session.exec(select(User).where(User.email == user_data.email)).first()
+            if existing_email:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already registered"
+                )
+
+            # Validate password strength
+            is_valid, error_msg = validate_password_strength(user_data.password)
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=error_msg
+                )
+
+            # Create new user
+            password_hash = get_password_hash(user_data.password)
+            db_user = User(
+                username=user_data.username,
+                email=user_data.email,
+                password_hash=password_hash,
+                first_name=user_data.first_name,
+                last_name=user_data.last_name,
+                is_active=True,
+                is_verified=False  # New users need to verify their email
+            )
+            session.add(db_user)
+            session.commit()
+            session.refresh(db_user)
+            return db_user
+        except IntegrityError:
+            session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Username already registered"
+                detail="Username or email already exists"
             )
-
-        # Check if email already exists
-        existing_email = session.exec(select(User).where(User.email == user_data.email)).first()
-        if existing_email:
+        except Exception:
+            session.rollback()
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An error occurred during registration"
             )
-
-        # Validate password strength
-        is_valid, error_msg = validate_password_strength(user_data.password)
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_msg
-            )
-
-        # Create new user
-        password_hash = get_password_hash(user_data.password)
-        db_user = User(
-            username=user_data.username,
-            email=user_data.email,
-            password_hash=password_hash,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            is_active=True,
-            is_verified=False  # New users need to verify their email
-        )
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-        return db_user
 
     @staticmethod
     def get_user_by_username(session: Session, username: str) -> Optional[User]:
