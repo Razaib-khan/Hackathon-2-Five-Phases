@@ -27,7 +27,7 @@ class Role(Base, table=True):
     is_active: bool = Field(default=True)
 
     # Relationships
-    users: List["User"] = Relationship(back_populates="roles", link_model="UserRoleLink")
+    users: List["User"] = Relationship(back_populates="roles", link_model=UserRoleLink)
     permissions: List["Permission"] = Relationship(back_populates="roles")
 
 
