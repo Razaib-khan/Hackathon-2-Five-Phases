@@ -83,7 +83,7 @@ async def list_tasks(
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse, summary="Get specific task")
 async def get_task(
-    task_id: int,
+    task_id: str,
     current_user: User = Depends(get_current_user_from_token),
     session: Session = Depends(get_session)
 ) -> TaskResponse:
@@ -98,7 +98,16 @@ async def get_task(
     Returns:
         TaskResponse object with the task's information
     """
-    task = TaskService.get_task_by_id(session, task_id)
+    from uuid import UUID
+    try:
+        task_uuid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid task ID format"
+        )
+
+    task = TaskService.get_task_by_id(session, task_uuid)
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -106,7 +115,7 @@ async def get_task(
         )
 
     # Check if the user has access to the task
-    has_access = TaskService.check_task_access(session, task_id, current_user.id)
+    has_access = TaskService.check_task_access(session, task_uuid, current_user.id)
     if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -118,7 +127,7 @@ async def get_task(
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse, summary="Update a task")
 async def update_task(
-    task_id: int,
+    task_id: str,
     task_update: TaskUpdate,
     current_user: User = Depends(get_current_user_from_token),
     session: Session = Depends(get_session)
@@ -135,6 +144,15 @@ async def update_task(
     Returns:
         TaskResponse object with the updated task's information
     """
+    from uuid import UUID
+    try:
+        task_uuid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid task ID format"
+        )
+
     # Validate task update data
     is_valid, error_msg = validate_task_update_data(task_update)
     if not is_valid:
@@ -144,7 +162,7 @@ async def update_task(
         )
 
     # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_id)
+    task = TaskService.get_task_by_id(session, task_uuid)
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -152,14 +170,14 @@ async def update_task(
         )
 
     # Check if the user has permission to update the task
-    has_permission = TaskService.check_task_access(session, task_id, current_user.id)
+    has_permission = TaskService.check_task_access(session, task_uuid, current_user.id)
     if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this task"
         )
 
-    updated_task = TaskService.update_task(session, task_id, task_update)
+    updated_task = TaskService.update_task(session, task_uuid, task_update)
     if not updated_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -171,7 +189,7 @@ async def update_task(
 
 @router.delete("/tasks/{task_id}", summary="Delete a task")
 async def delete_task(
-    task_id: int,
+    task_id: str,
     current_user: User = Depends(get_current_user_from_token),
     session: Session = Depends(get_session)
 ) -> dict:
@@ -186,8 +204,17 @@ async def delete_task(
     Returns:
         Success message
     """
+    from uuid import UUID
+    try:
+        task_uuid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid task ID format"
+        )
+
     # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_id)
+    task = TaskService.get_task_by_id(session, task_uuid)
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -202,7 +229,7 @@ async def delete_task(
             detail="Not authorized to delete this task"
         )
 
-    deleted = TaskService.delete_task(session, task_id)
+    deleted = TaskService.delete_task(session, task_uuid)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -214,7 +241,7 @@ async def delete_task(
 
 @router.patch("/tasks/{task_id}/status", response_model=TaskResponse, summary="Update task status")
 async def update_task_status(
-    task_id: int,
+    task_id: str,
     status: StatusEnum,
     current_user: User = Depends(get_current_user_from_token),
     session: Session = Depends(get_session)
@@ -231,8 +258,17 @@ async def update_task_status(
     Returns:
         TaskResponse object with the updated task's information
     """
+    from uuid import UUID
+    try:
+        task_uuid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid task ID format"
+        )
+
     # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_id)
+    task = TaskService.get_task_by_id(session, task_uuid)
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -240,14 +276,14 @@ async def update_task_status(
         )
 
     # Check if the user has permission to update the task
-    has_permission = TaskService.check_task_access(session, task_id, current_user.id)
+    has_permission = TaskService.check_task_access(session, task_uuid, current_user.id)
     if not has_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this task"
         )
 
-    updated_task = TaskService.update_task_status(session, task_id, status)
+    updated_task = TaskService.update_task_status(session, task_uuid, status)
     if not updated_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
