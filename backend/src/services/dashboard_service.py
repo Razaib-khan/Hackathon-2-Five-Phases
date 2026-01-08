@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
+from uuid import UUID
 from ..models.user import User
 from ..models.task import Task
 from ..models.project import Project
@@ -11,7 +12,7 @@ class DashboardService:
     """Service class for handling dashboard-related operations and statistics."""
 
     @staticmethod
-    def get_dashboard_statistics(session: Session, user_id: int) -> Dict[str, Any]:
+    def get_dashboard_statistics(session: Session, user_id: UUID) -> Dict[str, Any]:
         """
         Get dashboard statistics for a user.
 
@@ -77,7 +78,7 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_dashboard_tasks(session: Session, user_id: int) -> Dict[str, List[Task]]:
+    def get_dashboard_tasks(session: Session, user_id: UUID) -> Dict[str, List[Task]]:
         """
         Get dashboard task information for a user.
 
@@ -129,7 +130,7 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_dashboard_projects(session: Session, user_id: int) -> Dict[str, List[Project]]:
+    def get_dashboard_projects(session: Session, user_id: UUID) -> Dict[str, List[Project]]:
         """
         Get dashboard project information for a user.
 
@@ -166,7 +167,7 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_user_activity_stats(session: Session, user_id: int) -> Dict[str, Any]:
+    def get_user_activity_stats(session: Session, user_id: UUID) -> Dict[str, Any]:
         """
         Get user activity statistics.
 
@@ -214,7 +215,7 @@ class DashboardService:
         }
 
     @staticmethod
-    def check_dashboard_access(session: Session, user_id: int) -> bool:
+    def check_dashboard_access(session: Session, user_id: UUID) -> bool:
         """
         Check if a user has access to the dashboard.
 

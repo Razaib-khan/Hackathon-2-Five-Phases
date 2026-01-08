@@ -14,6 +14,7 @@ Special Behavior:
 - When parent task.completed = TRUE, all subtasks auto-complete (handled in task_service)
 """
 
+from uuid import UUID
 from sqlmodel import Session, select, func
 
 from ..models.subtask import Subtask
@@ -29,8 +30,8 @@ class SubtaskService:
     @staticmethod
     def create_subtask(
         session: Session,
-        task_id: int,
-        user_id: int,
+        task_id: UUID,
+        user_id: UUID,
         data: SubtaskCreateRequest,
     ) -> Subtask:
         """
@@ -80,7 +81,7 @@ class SubtaskService:
         return subtask
 
     @staticmethod
-    def get_subtask(session: Session, subtask_id: int, user_id: int) -> Subtask:
+    def get_subtask(session: Session, subtask_id: UUID, user_id: UUID) -> Subtask:
         """
         Get a single subtask by ID.
 
@@ -110,8 +111,8 @@ class SubtaskService:
     @staticmethod
     def update_subtask(
         session: Session,
-        subtask_id: int,
-        user_id: int,
+        subtask_id: UUID,
+        user_id: UUID,
         data: SubtaskUpdateRequest,
     ) -> Subtask:
         """
@@ -146,7 +147,7 @@ class SubtaskService:
         return subtask
 
     @staticmethod
-    def delete_subtask(session: Session, subtask_id: int, user_id: int) -> None:
+    def delete_subtask(session: Session, subtask_id: UUID, user_id: UUID) -> None:
         """
         Delete a subtask.
 
@@ -164,7 +165,7 @@ class SubtaskService:
         session.commit()
 
     @staticmethod
-    def complete_all_subtasks(session: Session, task_id: int) -> None:
+    def complete_all_subtasks(session: Session, task_id: UUID) -> None:
         """
         Mark all subtasks of a task as completed.
 

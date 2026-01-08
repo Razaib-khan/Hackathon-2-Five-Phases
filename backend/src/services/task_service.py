@@ -19,6 +19,7 @@ Special Behavior:
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlmodel import Session, select, func, or_
 
@@ -37,7 +38,7 @@ class TaskService:
     def create_task(
         session: Session,
         data: TaskCreate,
-        user_id: int,
+        user_id: UUID,
     ) -> Task:
         """
         Create a new task.
@@ -81,7 +82,7 @@ class TaskService:
         return task
 
     @staticmethod
-    def get_task(session: Session, task_id: int, user_id: int) -> Task:
+    def get_task(session: Session, task_id: UUID, user_id: UUID) -> Task:
         """
         Get a single task by ID.
 
@@ -109,7 +110,7 @@ class TaskService:
     @staticmethod
     def update_task(
         session: Session,
-        task_id: int,
+        task_id: UUID,
         data: TaskUpdate,
     ) -> Task:
         """
@@ -153,7 +154,7 @@ class TaskService:
         return task
 
     @staticmethod
-    def delete_task(session: Session, task_id: int) -> bool:
+    def delete_task(session: Session, task_id: UUID) -> bool:
         """
         Delete a task.
 
@@ -175,7 +176,7 @@ class TaskService:
 
     # Methods required by the API router
     @staticmethod
-    def check_task_creation_permissions(session: Session, user_id: int) -> bool:
+    def check_task_creation_permissions(session: Session, user_id: UUID) -> bool:
         """
         Check if a user has permission to create tasks.
 
@@ -191,7 +192,7 @@ class TaskService:
         return True
 
     @staticmethod
-    def get_tasks_by_user(session: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[Task]:
+    def get_tasks_by_user(session: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Task]:
         """
         Get tasks created by a specific user.
 
@@ -208,7 +209,7 @@ class TaskService:
         return session.exec(statement).all()
 
     @staticmethod
-    def get_tasks_assigned_to_user(session: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[Task]:
+    def get_tasks_assigned_to_user(session: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Task]:
         """
         Get tasks assigned to a specific user.
 
@@ -225,7 +226,7 @@ class TaskService:
         return session.exec(statement).all()
 
     @staticmethod
-    def get_task_by_id(session: Session, task_id: int) -> Optional[Task]:
+    def get_task_by_id(session: Session, task_id: UUID) -> Optional[Task]:
         """
         Get a task by its ID.
 
@@ -239,7 +240,7 @@ class TaskService:
         return session.get(Task, task_id)
 
     @staticmethod
-    def check_task_access(session: Session, task_id: int, user_id: int) -> bool:
+    def check_task_access(session: Session, task_id: UUID, user_id: UUID) -> bool:
         """
         Check if a user has access to a specific task.
 
@@ -258,7 +259,7 @@ class TaskService:
         return task.created_by == user_id or (task.assigned_to and task.assigned_to == user_id)
 
     @staticmethod
-    def update_task_status(session: Session, task_id: int, status: StatusEnum) -> Optional[Task]:
+    def update_task_status(session: Session, task_id: UUID, status: StatusEnum) -> Optional[Task]:
         """
         Update the status of a task.
 
@@ -282,7 +283,7 @@ class TaskService:
         return task
 
     @staticmethod
-    def update_task(session: Session, task_id: int, task_update: TaskUpdate) -> Optional[Task]:
+    def update_task(session: Session, task_id: UUID, task_update: TaskUpdate) -> Optional[Task]:
         """
         Update a task with the provided data.
 

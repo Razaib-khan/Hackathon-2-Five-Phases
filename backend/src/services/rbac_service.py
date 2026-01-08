@@ -1,5 +1,6 @@
 from sqlmodel import Session, select
 from typing import Optional, List
+from uuid import UUID
 from fastapi import HTTPException, status
 from ..models.user import User
 from ..models.role import Role
@@ -12,7 +13,7 @@ class RBACService:
     """Role-Based Access Control service for managing permissions and access control."""
 
     @staticmethod
-    def get_user_roles(session: Session, user_id: int) -> List[Role]:
+    def get_user_roles(session: Session, user_id: UUID) -> List[Role]:
         """
         Get all roles assigned to a user.
 
@@ -33,7 +34,7 @@ class RBACService:
         return user.roles
 
     @staticmethod
-    def get_user_permissions(session: Session, user_id: int) -> List[Permission]:
+    def get_user_permissions(session: Session, user_id: UUID) -> List[Permission]:
         """
         Get all permissions assigned to a user through their roles.
 
@@ -59,7 +60,7 @@ class RBACService:
         return permissions
 
     @staticmethod
-    def check_permission(session: Session, user_id: int, resource: str, action: str) -> bool:
+    def check_permission(session: Session, user_id: UUID, resource: str, action: str) -> bool:
         """
         Check if a user has permission to perform an action on a resource.
 
@@ -82,7 +83,7 @@ class RBACService:
         return False
 
     @staticmethod
-    def check_resource_access(session: Session, user_id: int, resource_type: str, resource_id: int) -> bool:
+    def check_resource_access(session: Session, user_id: UUID, resource_type: str, resource_id: int) -> bool:
         """
         Check if a user has access to a specific resource based on ownership or permissions.
 
@@ -115,7 +116,7 @@ class RBACService:
         return False
 
     @staticmethod
-    def assign_role_to_user(session: Session, user_id: int, role_id: int) -> bool:
+    def assign_role_to_user(session: Session, user_id: UUID, role_id: int) -> bool:
         """
         Assign a role to a user.
 
@@ -143,7 +144,7 @@ class RBACService:
         return True
 
     @staticmethod
-    def remove_role_from_user(session: Session, user_id: int, role_id: int) -> bool:
+    def remove_role_from_user(session: Session, user_id: UUID, role_id: int) -> bool:
         """
         Remove a role from a user.
 
@@ -171,7 +172,7 @@ class RBACService:
         return True
 
     @staticmethod
-    def check_admin_access(session: Session, user_id: int) -> bool:
+    def check_admin_access(session: Session, user_id: UUID) -> bool:
         """
         Check if a user has admin privileges (has 'admin' role).
 
@@ -194,7 +195,7 @@ class RBACService:
         return False
 
     @staticmethod
-    def check_user_management_access(session: Session, requesting_user_id: int, target_user_id: int) -> bool:
+    def check_user_management_access(session: Session, requesting_user_id: UUID, target_user_id: UUID) -> bool:
         """
         Check if a user can manage another user (e.g., deactivate, assign roles).
 
@@ -214,7 +215,7 @@ class RBACService:
         return requesting_user_id == target_user_id
 
     @staticmethod
-    def check_task_management_access(session: Session, user_id: int, task_id: int) -> bool:
+    def check_task_management_access(session: Session, user_id: UUID, task_id: int) -> bool:
         """
         Check if a user can manage a task (update, delete).
 
@@ -238,7 +239,7 @@ class RBACService:
         return task.created_by == user_id or task.assigned_to == user_id
 
     @staticmethod
-    def check_project_management_access(session: Session, user_id: int, project_id: int) -> bool:
+    def check_project_management_access(session: Session, user_id: UUID, project_id: int) -> bool:
         """
         Check if a user can manage a project (update, delete).
 

@@ -1,5 +1,6 @@
 from sqlmodel import Session, select
 from typing import Optional, List
+from uuid import UUID
 from fastapi import HTTPException, status
 from ..models.user import User
 from ..models.schemas.user import UserCreate, UserUpdate, UserResponse
@@ -11,7 +12,7 @@ class UserService:
     """Service class for handling user-related operations."""
 
     @staticmethod
-    def get_user_by_id(session: Session, user_id: int) -> Optional[User]:
+    def get_user_by_id(session: Session, user_id: UUID) -> Optional[User]:
         """
         Get a user by ID.
 
@@ -131,7 +132,7 @@ class UserService:
         return db_user
 
     @staticmethod
-    def update_user(session: Session, user_id: int, user_update: UserUpdate) -> Optional[User]:
+    def update_user(session: Session, user_id: UUID, user_update: UserUpdate) -> Optional[User]:
         """
         Update a user.
 
@@ -183,7 +184,7 @@ class UserService:
         return db_user
 
     @staticmethod
-    def delete_user(session: Session, user_id: int) -> bool:
+    def delete_user(session: Session, user_id: UUID) -> bool:
         """
         Delete a user.
 
@@ -203,7 +204,7 @@ class UserService:
         return True
 
     @staticmethod
-    def activate_user(session: Session, user_id: int) -> Optional[User]:
+    def activate_user(session: Session, user_id: UUID) -> Optional[User]:
         """
         Activate a user account.
 
@@ -225,7 +226,7 @@ class UserService:
         return db_user
 
     @staticmethod
-    def deactivate_user(session: Session, user_id: int) -> Optional[User]:
+    def deactivate_user(session: Session, user_id: UUID) -> Optional[User]:
         """
         Deactivate a user account.
 
