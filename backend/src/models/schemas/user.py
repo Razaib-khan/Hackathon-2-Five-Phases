@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator
 from typing import Optional
+from uuid import UUID
 import re
 from datetime import datetime
 
@@ -68,7 +69,7 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(UserBase):
-    id: int
+    id: UUID
     is_active: bool
     is_verified: bool
     created_at: datetime
