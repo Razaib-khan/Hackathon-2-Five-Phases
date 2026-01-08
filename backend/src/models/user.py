@@ -17,14 +17,15 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
-# Import for runtime use
-from .role import Role
-
 if TYPE_CHECKING:
     from .task import Task
     from .tag import Tag
     from .user_settings import UserSettings
-    from .role import UserRoleLink
+    from .role import Role, UserRoleLink
+
+
+# Import after TYPE_CHECKING to avoid circular import during definition
+from .role import UserRoleLink  # noqa: E402
 
 
 class User(SQLModel, table=True):
@@ -55,7 +56,7 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    roles: List["Role"] = Relationship(back_populates="users", link_model="UserRoleLink")
+    roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)
     settings: Optional["UserSettings"] = Relationship(back_populates="user")
 
 
