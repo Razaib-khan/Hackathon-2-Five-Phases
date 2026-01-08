@@ -71,25 +71,49 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[User]:
-    """Get the current user from a token."""
+def get_current_user_from_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session: Session = Depends(get_session)
+) -> Optional[User]:
+    """
+    Get the current user from a token using proper session injection.
+
+    This function uses FastAPI's dependency injection to get the database session,
+    avoiding the issue of creating sessions directly which can lead to connection leaks.
+
+    Args:
+        credentials: JWT token from Authorization header
+        session: Database session injected by FastAPI
+
+    Returns:
+        User object if token is valid and user exists, None otherwise
+    """
     token = credentials.credentials
     payload = verify_token(token)
     if payload is None:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     username: str = payload.get("sub")
     if username is None:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # We need to get the session in a different way since we can't inject it directly
-    # This function should be rewritten to use a different approach
-    from ..config.database import engine
-    from sqlmodel import Session as SQLModelSession
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    with SQLModelSession(engine) as session:
-        user = session.exec(select(User).where(User.username == username)).first()
-        return user
+    return user
 
 
 def generate_verification_token() -> str:

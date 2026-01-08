@@ -50,7 +50,7 @@ async def list_tasks(
     completed: Optional[bool] = Query(default=None, description="Filter by completion status"),
     search: Optional[str] = Query(default=None, max_length=100, description="Search in title/description"),
     sort_by: str = Query(default="created_at", description="Sort field"),
-    sort_order: str = Query(default="desc", regex="^(asc|desc)$", description="Sort order"),
+    sort_order: str = Query(default="desc", pattern=r"^(asc|desc)$", description="Sort order"),
     current_user_id: str = Depends(get_current_user),
     db: Session = Depends(get_session),
 ) -> TaskListResponse:
