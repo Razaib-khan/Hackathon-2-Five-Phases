@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .task import Task
     from .tag import Tag
     from .user_settings import UserSettings
-    from .role import Role
+    from .role import Role, UserRoleLink
 
 
 class User(SQLModel, table=True):
@@ -52,7 +52,7 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    roles: List["Role"] = Relationship(back_populates="users")
+    roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)
     settings: Optional["UserSettings"] = Relationship(back_populates="user")
 
 
