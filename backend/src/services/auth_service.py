@@ -100,11 +100,11 @@ class AuthService:
             )
 
         # Create new user
-        hashed_password = get_password_hash(user_data.password)
+        password_hash = get_password_hash(user_data.password)
         db_user = User(
             username=user_data.username,
             email=user_data.email,
-            hashed_password=hashed_password,
+            password_hash=password_hash,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             is_active=True,

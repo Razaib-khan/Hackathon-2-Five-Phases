@@ -30,8 +30,13 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    username: str = Field(index=True, unique=True, max_length=255)
     email: str = Field(index=True, unique=True, max_length=255)
     password_hash: str = Field(max_length=255)
+    first_name: Optional[str] = Field(default=None, max_length=100)
+    last_name: Optional[str] = Field(default=None, max_length=100)
+    is_active: bool = Field(default=True)
+    is_verified: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
