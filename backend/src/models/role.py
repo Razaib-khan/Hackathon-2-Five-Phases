@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 from sqlalchemy import DateTime, func, Column
+from uuid import UUID
 from .base import Base
 
 if TYPE_CHECKING:
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 # Association table for many-to-many relationship between users and roles
 class UserRoleLink(SQLModel, table=True):
     __tablename__ = "user_roles"
-    user_id: Optional[int] = Field(default=None, foreign_key="users.id", primary_key=True)
+    user_id: Optional[UUID] = Field(default=None, foreign_key="users.id", primary_key=True)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id", primary_key=True)
     assigned_at: Optional[datetime] = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
 
