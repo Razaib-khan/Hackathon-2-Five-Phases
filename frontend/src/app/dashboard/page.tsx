@@ -31,7 +31,7 @@ import { ExportDialog } from '@/components/ExportDialog'
 import { KeyboardShortcutsPanel } from '@/components/KeyboardShortcutsPanel'
 import { OfflineQueueStatus } from '@/components/OfflineQueueStatus'
 import TaskCreationDialog from '@/components/TaskCreationDialog'
-import AppLogo from '@/components/AppLogo'
+import WebsiteLogo from '@/components/WebsiteLogo'
 import {
   LayoutList,
   LayoutGrid,
@@ -156,7 +156,7 @@ function DashboardContent() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <AppLogo size="navbar" />
+              <WebsiteLogo size="navbar" />
             </div>
 
             {/* Actions */}

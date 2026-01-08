@@ -14,7 +14,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import AppLogo from '@/components/AppLogo';
+import WebsiteLogo from '@/components/WebsiteLogo';
 
 export default function RegisterPage() {
   const { register, isLoading: authLoading } = useAuth();
@@ -88,7 +88,7 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto mb-4">
-            <AppLogo size="auth" />
+            <WebsiteLogo size="auth" />
           </div>
           <h2 className="mt-2 text-center text-xl text-gray-600">
             Create your account

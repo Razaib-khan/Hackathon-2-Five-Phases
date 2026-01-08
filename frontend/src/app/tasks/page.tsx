@@ -18,7 +18,7 @@ import { useTasks } from '@/lib/hooks/useTasks';
 import { getTasks } from '@/lib/api';
 import { TaskList, TaskForm, TaskFiltersComponent, Modal } from '@/components';
 import type { Task, TaskFilters, TaskCreateRequest, TaskUpdateRequest } from '@/types';
-import AppLogo from '@/components/AppLogo';
+import WebsiteLogo from '@/components/WebsiteLogo';
 
 export default function TasksPage() {
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
@@ -162,7 +162,7 @@ export default function TasksPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center">
-            <AppLogo size="navbar" />
+            <WebsiteLogo size="navbar" />
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user.email}</span>
