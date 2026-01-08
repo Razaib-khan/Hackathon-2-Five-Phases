@@ -101,6 +101,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
         raise credentials_exception
 
 
+def decode_access_token(token: str) -> dict:
+    """
+    Decode a JWT access token and return its payload.
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Token payload dictionary
+
+    Raises:
+        jwt.ExpiredSignatureError: If token has expired
+        jwt.InvalidTokenError: If token is invalid
+    """
+    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
+
 def verify_user_access(token_user_id: str, path_user_id: str) -> None:
     """
     Verify that the authenticated user matches the requested user_id.
