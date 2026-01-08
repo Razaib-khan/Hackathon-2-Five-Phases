@@ -5,9 +5,11 @@ from sqlalchemy import DateTime, func, Column
 from uuid import UUID
 from .base import Base
 
+# Import for runtime use
+from .permission import Permission, RolePermissionLink
+
 if TYPE_CHECKING:
     from .user import User
-    from .permission import Permission
 
 
 # Association table for many-to-many relationship between users and roles
@@ -29,7 +31,7 @@ class Role(Base, table=True):
 
     # Relationships
     users: List["User"] = Relationship(back_populates="roles", link_model=UserRoleLink)
-    permissions: List["Permission"] = Relationship(back_populates="roles")
+    permissions: List["Permission"] = Relationship(back_populates="roles", link_model=RolePermissionLink)
 
 
 # Pydantic models for API requests/responses
