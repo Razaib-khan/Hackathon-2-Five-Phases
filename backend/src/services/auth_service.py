@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from ..models.user import User
-from ..utils.auth import verify_password, get_password_hash, create_access_token, create_refresh_token
+from ..utils.auth import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token
 from ..models.schemas.user import UserCreate
 from ..config.settings import settings
 from ..utils.security import validate_password_strength
@@ -238,3 +238,16 @@ class AuthService:
         session.commit()
         session.refresh(user)
         return user
+
+    @staticmethod
+    def verify_token(token: str) -> Optional[dict]:
+        """
+        Verify a JWT token and return the payload.
+
+        Args:
+            token: JWT token to verify
+
+        Returns:
+            Token payload if valid, None otherwise
+        """
+        return verify_token(token)

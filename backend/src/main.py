@@ -130,7 +130,7 @@ app.include_router(task_router, prefix=settings.api_v1_str, tags=["Tasks"])
 app.include_router(dashboard_router, prefix=settings.api_v1_str, tags=["Dashboard"])
 
 # Include API routes without version prefix (for Hugging Face Space direct access)
-app.include_router(auth_router_legacy, tags=["Authentication (Legacy Direct)"])
+# NOTE: Only include the main auth router to avoid route conflicts
 app.include_router(auth_router, tags=["Authentication (Direct)"])
 app.include_router(user_router, tags=["Users (Direct)"])
 app.include_router(project_router, tags=["Projects (Direct)"])

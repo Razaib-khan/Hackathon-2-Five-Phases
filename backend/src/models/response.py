@@ -6,7 +6,7 @@ from enum import Enum
 T = TypeVar('T')
 
 
-class ResponseStatus(str Enum):
+class ResponseStatus(str, Enum):
     SUCCESS = "success"
     ERROR = "error"
 
