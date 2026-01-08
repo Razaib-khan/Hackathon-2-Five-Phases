@@ -119,6 +119,7 @@ from .api.user_router import router as user_router
 from .api.project_router import router as project_router
 from .api.task_router import router as task_router
 from .api.dashboard_router import router as dashboard_router
+from .routers.analytics import router as analytics_router
 
 # Import error handlers
 from .middleware.error_handler import add_error_handlers
@@ -133,6 +134,7 @@ app.include_router(user_router, prefix=settings.api_v1_str, tags=["Users"])
 app.include_router(project_router, prefix=settings.api_v1_str, tags=["Projects"])
 app.include_router(task_router, prefix=settings.api_v1_str, tags=["Tasks"])
 app.include_router(dashboard_router, prefix=settings.api_v1_str, tags=["Dashboard"])
+app.include_router(analytics_router, prefix=settings.api_v1_str, tags=["Analytics"])
 
 # Include API routes without version prefix (for Hugging Face Space direct access)
 # Only include the main auth router to avoid route conflicts
@@ -141,6 +143,7 @@ app.include_router(user_router, tags=["Users (Direct)"])
 app.include_router(project_router, tags=["Projects (Direct)"])
 app.include_router(task_router, tags=["Tasks (Direct)"])
 app.include_router(dashboard_router, tags=["Dashboard (Direct)"])
+app.include_router(analytics_router, tags=["Analytics (Direct)"])
 
 
 # Development entry point
