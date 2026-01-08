@@ -18,20 +18,20 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
       logoHeight = 40;  // Maintain aspect ratio
       break;
     case 'auth':
-      logoWidth = 200;  // Larger size for auth pages
-      logoHeight = 60;  // Maintain aspect ratio
+      logoWidth = 300;  // Larger size for auth pages (increased from 200)
+      logoHeight = 90;  // Maintain aspect ratio (increased from 60)
       break;
     case 'large':
-      logoWidth = 300;  // Large size for landing pages
-      logoHeight = 90;  // Maintain aspect ratio
+      logoWidth = 400;  // Large size for landing pages (increased from 300)
+      logoHeight = 120;  // Maintain aspect ratio (increased from 90)
       break;
     case 'custom':
-      logoWidth = width || 200;
-      logoHeight = height || 60;
+      logoWidth = width || 300;
+      logoHeight = height || 90;
       break;
     default:
-      logoWidth = 200;
-      logoHeight = 60;
+      logoWidth = 300;
+      logoHeight = 90;
   }
 
   useEffect(() => {
@@ -46,8 +46,13 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
     }
   }, []);
 
+  // For auth pages, center the logo by adding justify-center to the container
+  const containerClass = size === 'auth'
+    ? `flex items-center justify-center ${className}`
+    : `flex items-center ${className}`;
+
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={containerClass}>
       <img
         src={logoPath}
         alt="AIDO Logo"
