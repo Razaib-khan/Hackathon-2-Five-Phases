@@ -56,15 +56,36 @@ export async function apiCall<T>(
 }
 
 export async function login(email: string, password: string) {
-  const data = await apiCall<any>('/auth/login', {
+  // Create form data for OAuth2PasswordRequestForm compliance
+  const formData = new FormData();
+  formData.append('username', email);  // Backend treats email as username
+  formData.append('password', password);
+
+  // Make the fetch request with form data
+  const response = await fetch(`${API_URL}/v1/auth/login`, {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
-    skipAuth: true,
-  })
-  if (data.access_token) {
-    localStorage?.setItem('authToken', data.access_token)
+    body: formData,
+    // Don't set Content-Type header, let browser set it with boundary
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => `API error: ${response.status}`);
+    throw new Error(`API error: ${response.status} - ${errorText}`);
   }
-  return data
+
+  const data = await response.json();
+  if (data.access_token) {
+    localStorage?.setItem('authToken', data.access_token);
+    // Store refresh token as well
+    if (data.refresh_token) {
+      localStorage?.setItem('refreshToken', data.refresh_token);
+    }
+    // Store token expiry time
+    if (data.expires_in) {
+      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
+    }
+  }
+  return data;
 }
 
 export async function signup(email: string, password: string) {
@@ -80,7 +101,7 @@ export async function signup(email: string, password: string) {
     username = username.substring(0, 50);  // Truncate if too long
   }
 
-  const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
+  const data = await apiCall<any>('/v1/auth/register', {  // Use the endpoint that expects full user data
     method: 'POST',
     body: JSON.stringify({
       username,
@@ -93,12 +114,20 @@ export async function signup(email: string, password: string) {
   })
   if (data.access_token) {
     localStorage?.setItem('authToken', data.access_token)
+    // Store refresh token as well
+    if (data.refresh_token) {
+      localStorage?.setItem('refreshToken', data.refresh_token);
+    }
+    // Store token expiry time
+    if (data.expires_in) {
+      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
+    }
   }
   return data
 }
 
 export async function signupWithDetails(username: string, email: string, password: string, firstName: string = '', lastName: string = '') {
-  const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
+  const data = await apiCall<any>('/v1/auth/register', {  // Use the endpoint that expects full user data
     method: 'POST',
     body: JSON.stringify({
       username,
@@ -111,6 +140,14 @@ export async function signupWithDetails(username: string, email: string, passwor
   })
   if (data.access_token) {
     localStorage?.setItem('authToken', data.access_token)
+    // Store refresh token as well
+    if (data.refresh_token) {
+      localStorage?.setItem('refreshToken', data.refresh_token);
+    }
+    // Store token expiry time
+    if (data.expires_in) {
+      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
+    }
   }
   return data
 }
@@ -123,23 +160,41 @@ export async function register(email: string, password: string) {
 export async function logout() {
   try {
     // Call the backend logout endpoint to properly invalidate the session
-    await apiCall('/auth/logout', { skipAuth: true });
+    await apiCall('/v1/auth/logout', { skipAuth: true });
   } catch (error) {
     // Even if the backend call fails, still clear the local token
     console.warn('Logout API call failed:', error);
   } finally {
     // Always clear the local token regardless of backend response
     localStorage?.removeItem('authToken');
+    localStorage?.removeItem('refreshToken');
   }
 }
 
 // Token refresh function
 export async function refreshToken(currentRefreshToken: string) {
-  const data = await apiCall<any>('/auth/refresh', {
+  // The backend expects the refresh token in the request body
+  const response = await fetch(`${API_URL}/v1/auth/refresh`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ refresh_token: currentRefreshToken }),
-    skipAuth: true,
   });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => `API error: ${response.status}`);
+    throw new Error(`API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  if (data.access_token) {
+    localStorage?.setItem('authToken', data.access_token);
+    // Update token expiry time
+    if (data.expires_in) {
+      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
+    }
+  }
   return data;
 }
 
@@ -154,33 +209,33 @@ export async function getTasks(filters?: TaskFilterOptions): Promise<TaskListRes
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/tasks${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/v1/tasks${queryString ? `?${queryString}` : ''}`
   return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
 }
 
 export async function createTask(data: TaskCreateRequest): Promise<any> {
-  return apiCall<any>('/tasks', {
+  return apiCall<any>('/v1/tasks', {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateTask(taskId: string, data: TaskUpdateRequest): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}`, {
+  return apiCall<any>(`/v1/tasks/${taskId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   })
 }
 
 export async function toggleTaskComplete(taskId: string, completed?: boolean): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}/complete`, {
+  return apiCall<any>(`/v1/tasks/${taskId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ completed: completed ?? true }),
+    body: JSON.stringify({ status: completed ? 'done' : 'todo' }),
   })
 }
 
 export async function deleteTask(taskId: string): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}`, { method: 'DELETE' })
+  return apiCall<any>(`/v1/tasks/${taskId}`, { method: 'DELETE' })
 }
 
 // Tag API functions
@@ -194,31 +249,31 @@ export async function getTags(filters?: any): Promise<TagListResponse> {
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/tags${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/v1/tags${queryString ? `?${queryString}` : ''}`
   return apiCall<TagListResponse>(endpoint, { method: 'GET' })
 }
 
 export async function createTag(data: TagCreateRequest): Promise<any> {
-  return apiCall<any>('/tags', {
+  return apiCall<any>('/v1/tags', {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateTag(tagId: string, data: TagUpdateRequest): Promise<any> {
-  return apiCall<any>(`/tags/${tagId}`, {
+  return apiCall<any>(`/v1/tags/${tagId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   })
 }
 
 export async function deleteTag(tagId: string): Promise<void> {
-  return apiCall<void>(`/tags/${tagId}`, { method: 'DELETE' })
+  return apiCall<void>(`/v1/tags/${tagId}`, { method: 'DELETE' })
 }
 
 // Export API functions
 export async function exportTasks(format: 'json' | 'csv', params?: { include_completed?: boolean; start_date?: string; end_date?: string }): Promise<any> {
-  const url = new URL('/export', `${API_URL}`);
+  const url = new URL('/v1/export', `${API_URL}`);
   url.searchParams.append('format', format);
 
   if (params) {
@@ -234,7 +289,7 @@ export async function exportTasks(format: 'json' | 'csv', params?: { include_com
 
 // Analytics API functions
 export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<any> {
-  const url = new URL('/analytics/dashboard', `${API_URL}`);
+  const url = new URL('/v1/analytics/dashboard', `${API_URL}`);
   if (period) {
     url.searchParams.append('period', period);
   }
@@ -243,16 +298,16 @@ export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' |
 }
 
 export async function getStreakData(): Promise<any> {
-  return apiCall<any>('/analytics/streak', { method: 'GET' });
+  return apiCall<any>('/v1/analytics/streak', { method: 'GET' });
 }
 
 // User Preferences API functions
 export async function getUserPreferences(): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/user/preferences', { method: 'GET' });
+  return apiCall<UserPreferences>('/v1/user/preferences', { method: 'GET' });
 }
 
 export async function updateUserPreferences(preferences: UserPreferencesUpdateRequest): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/user/preferences', {
+  return apiCall<UserPreferences>('/v1/user/preferences', {
     method: 'PATCH',
     body: JSON.stringify(preferences)
   });
@@ -260,11 +315,11 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdateRe
 
 // User Settings API functions
 export async function getUserSettings(): Promise<any> {
-  return apiCall<any>('/user/settings', { method: 'GET' });
+  return apiCall<any>('/v1/user/settings', { method: 'GET' });
 }
 
 export async function updateUserSettings(data: any): Promise<any> {
-  return apiCall<any>('/user/settings', {
+  return apiCall<any>('/v1/user/settings', {
     method: 'PATCH',
     body: JSON.stringify(data)
   });
@@ -272,7 +327,7 @@ export async function updateUserSettings(data: any): Promise<any> {
 
 export async function checkHealth() {
   try {
-    return await apiCall('/health', { skipAuth: true })
+    return await apiCall('/v1/health', { skipAuth: true })
   } catch {
     return { status: 'offline', database: 'disconnected' }
   }
@@ -318,26 +373,26 @@ export interface TagUpdateData {
 
 // Subtask API functions
 export async function createSubtask(taskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/tasks/${taskId}/subtasks`, {
+  return apiCall<any>(`/v1/tasks/${taskId}/subtasks`, {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateSubtask(subtaskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/subtasks/${subtaskId}`, {
+  return apiCall<any>(`/v1/subtasks/${subtaskId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   })
 }
 
 export async function deleteSubtask(subtaskId: string): Promise<any> {
-  return apiCall<any>(`/subtasks/${subtaskId}`, { method: 'DELETE' })
+  return apiCall<any>(`/v1/subtasks/${subtaskId}`, { method: 'DELETE' })
 }
 
 // Streak API function
 export async function getStreak() {
-  return apiCall('/analytics/streak', { method: 'GET' })
+  return apiCall('/v1/analytics/streak', { method: 'GET' })
 }
 
 

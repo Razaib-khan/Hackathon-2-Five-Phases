@@ -32,19 +32,24 @@ export async function refreshAuthToken(): Promise<string | null> {
   if (Date.now() >= parseInt(refreshExpiry, 10)) return null;
 
   try {
-    const response = await fetch('/api/auth/refresh', {
+    // Use the correct API URL and versioned endpoint
+    const API_URL = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
+      ? process.env.NEXT_PUBLIC_API_URL
+      : 'http://localhost:8000';
+
+    const response = await fetch(`${API_URL}/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken })
+      body: JSON.stringify({ refresh_token: refreshToken })  // Backend expects 'refresh_token' field name
     });
 
     if (!response.ok) throw new Error('Refresh failed');
 
     const data = await response.json();
-    localStorage.setItem('authToken', data.accessToken);
-    localStorage.setItem('tokenExpiry', String(Date.now() + (data.expiresIn * 1000)));
+    localStorage.setItem('authToken', data.access_token);  // Backend returns 'access_token' field
+    localStorage.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));  // Backend returns 'expires_in'
 
-    return data.accessToken;
+    return data.access_token;  // Backend returns 'access_token' field
   } catch (error) {
     clearAuthTokens();
     return null;
