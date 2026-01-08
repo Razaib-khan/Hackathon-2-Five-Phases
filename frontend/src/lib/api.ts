@@ -56,7 +56,7 @@ export async function apiCall<T>(
 }
 
 export async function login(email: string, password: string) {
-  const data = await apiCall<any>('/login', {  // Changed to use simpler endpoint
+  const data = await apiCall<any>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
     skipAuth: true,
@@ -121,7 +121,26 @@ export async function register(email: string, password: string) {
 }
 
 export async function logout() {
-  localStorage?.removeItem('authToken')
+  try {
+    // Call the backend logout endpoint to properly invalidate the session
+    await apiCall('/auth/logout', { skipAuth: true });
+  } catch (error) {
+    // Even if the backend call fails, still clear the local token
+    console.warn('Logout API call failed:', error);
+  } finally {
+    // Always clear the local token regardless of backend response
+    localStorage?.removeItem('authToken');
+  }
+}
+
+// Token refresh function
+export async function refreshToken(currentRefreshToken: string) {
+  const data = await apiCall<any>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: currentRefreshToken }),
+    skipAuth: true,
+  });
+  return data;
 }
 
 // Task API functions
@@ -135,33 +154,33 @@ export async function getTasks(filters?: TaskFilterOptions): Promise<TaskListRes
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/tasks${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/tasks${queryString ? `?${queryString}` : ''}`
   return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
 }
 
 export async function createTask(data: TaskCreateRequest): Promise<any> {
-  return apiCall<any>('/api/tasks', {
+  return apiCall<any>('/tasks', {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateTask(taskId: string, data: TaskUpdateRequest): Promise<any> {
-  return apiCall<any>(`/api/tasks/${taskId}`, {
+  return apiCall<any>(`/tasks/${taskId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   })
 }
 
 export async function toggleTaskComplete(taskId: string, completed?: boolean): Promise<any> {
-  return apiCall<any>(`/api/tasks/${taskId}/complete`, {
+  return apiCall<any>(`/tasks/${taskId}/complete`, {
     method: 'PATCH',
     body: JSON.stringify({ completed: completed ?? true }),
   })
 }
 
 export async function deleteTask(taskId: string): Promise<any> {
-  return apiCall<any>(`/api/tasks/${taskId}`, { method: 'DELETE' })
+  return apiCall<any>(`/tasks/${taskId}`, { method: 'DELETE' })
 }
 
 // Tag API functions
@@ -175,31 +194,31 @@ export async function getTags(filters?: any): Promise<TagListResponse> {
     })
   }
   const queryString = queryParams.toString()
-  const endpoint = `/api/tags${queryString ? `?${queryString}` : ''}`
+  const endpoint = `/tags${queryString ? `?${queryString}` : ''}`
   return apiCall<TagListResponse>(endpoint, { method: 'GET' })
 }
 
 export async function createTag(data: TagCreateRequest): Promise<any> {
-  return apiCall<any>('/api/tags', {
+  return apiCall<any>('/tags', {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateTag(tagId: string, data: TagUpdateRequest): Promise<any> {
-  return apiCall<any>(`/api/tags/${tagId}`, {
+  return apiCall<any>(`/tags/${tagId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   })
 }
 
 export async function deleteTag(tagId: string): Promise<void> {
-  return apiCall<void>(`/api/tags/${tagId}`, { method: 'DELETE' })
+  return apiCall<void>(`/tags/${tagId}`, { method: 'DELETE' })
 }
 
 // Export API functions
 export async function exportTasks(format: 'json' | 'csv', params?: { include_completed?: boolean; start_date?: string; end_date?: string }): Promise<any> {
-  const url = new URL('/api/export', `${API_URL}`);
+  const url = new URL('/export', `${API_URL}`);
   url.searchParams.append('format', format);
 
   if (params) {
@@ -215,7 +234,7 @@ export async function exportTasks(format: 'json' | 'csv', params?: { include_com
 
 // Analytics API functions
 export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<any> {
-  const url = new URL('/api/analytics/dashboard', `${API_URL}`);
+  const url = new URL('/analytics/dashboard', `${API_URL}`);
   if (period) {
     url.searchParams.append('period', period);
   }
@@ -224,16 +243,16 @@ export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' |
 }
 
 export async function getStreakData(): Promise<any> {
-  return apiCall<any>('/api/analytics/streak', { method: 'GET' });
+  return apiCall<any>('/analytics/streak', { method: 'GET' });
 }
 
 // User Preferences API functions
 export async function getUserPreferences(): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/api/user/preferences', { method: 'GET' });
+  return apiCall<UserPreferences>('/user/preferences', { method: 'GET' });
 }
 
 export async function updateUserPreferences(preferences: UserPreferencesUpdateRequest): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/api/user/preferences', {
+  return apiCall<UserPreferences>('/user/preferences', {
     method: 'PATCH',
     body: JSON.stringify(preferences)
   });
@@ -241,11 +260,11 @@ export async function updateUserPreferences(preferences: UserPreferencesUpdateRe
 
 // User Settings API functions
 export async function getUserSettings(): Promise<any> {
-  return apiCall<any>('/api/user/settings', { method: 'GET' });
+  return apiCall<any>('/user/settings', { method: 'GET' });
 }
 
 export async function updateUserSettings(data: any): Promise<any> {
-  return apiCall<any>('/api/user/settings', {
+  return apiCall<any>('/user/settings', {
     method: 'PATCH',
     body: JSON.stringify(data)
   });
@@ -299,26 +318,26 @@ export interface TagUpdateData {
 
 // Subtask API functions
 export async function createSubtask(taskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/api/tasks/${taskId}/subtasks`, {
+  return apiCall<any>(`/tasks/${taskId}/subtasks`, {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export async function updateSubtask(subtaskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/api/subtasks/${subtaskId}`, {
+  return apiCall<any>(`/subtasks/${subtaskId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   })
 }
 
 export async function deleteSubtask(subtaskId: string): Promise<any> {
-  return apiCall<any>(`/api/subtasks/${subtaskId}`, { method: 'DELETE' })
+  return apiCall<any>(`/subtasks/${subtaskId}`, { method: 'DELETE' })
 }
 
 // Streak API function
 export async function getStreak() {
-  return apiCall('/api/analytics/streak', { method: 'GET' })
+  return apiCall('/analytics/streak', { method: 'GET' })
 }
 
 
