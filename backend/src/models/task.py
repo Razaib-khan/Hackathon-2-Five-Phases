@@ -35,6 +35,7 @@ from sqlalchemy import JSON
 
 if TYPE_CHECKING:
     from .user import User
+    from .project import Project
     from .task_tag import TaskTag
     from .subtask import Subtask
 
@@ -61,6 +62,7 @@ class Task(SQLModel, table=True):
     custom_order: Optional[int] = Field(default=None)  # user-defined position
     recurrence_pattern: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))  # JSONB config
     version: int = Field(default=1)  # optimistic locking
+    project_id: Optional[int] = Field(default=None, foreign_key="projects.id")  # Project association
 
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(
@@ -70,5 +72,6 @@ class Task(SQLModel, table=True):
 
     # Relationships
     user: Optional["User"] = Relationship(back_populates="tasks")
+    project: Optional["Project"] = Relationship(back_populates="tasks")
     task_tags: List["TaskTag"] = Relationship(back_populates="task")
     subtasks: List["Subtask"] = Relationship(back_populates="task", cascade_delete=True)
