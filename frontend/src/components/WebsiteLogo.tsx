@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface WebsiteLogoProps {
   size?: 'navbar' | 'auth' | 'large' | 'custom';
@@ -8,6 +8,7 @@ interface WebsiteLogoProps {
 }
 
 const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height, className = '' }) => {
+  const [logoPath, setLogoPath] = useState('/WebsiteLogo.svg');
   let logoWidth: number;
   let logoHeight: number;
 
@@ -33,8 +34,17 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
       logoHeight = 60;
   }
 
-  // Use simple path - Next.js assetPrefix will handle GitHub Pages path adjustment
-  const logoPath = '/WebsiteLogo.svg';
+  useEffect(() => {
+    // Check if we're in a GitHub Pages environment
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const hasRepoPath = window.location.pathname.startsWith('/Hackathon-2-Five-Phases');
+
+    if (isGitHubPages && hasRepoPath) {
+      setLogoPath('/Hackathon-2-Five-Phases/WebsiteLogo.svg');
+    } else {
+      setLogoPath('/WebsiteLogo.svg');
+    }
+  }, []);
 
   return (
     <div className={`flex items-center ${className}`}>
@@ -45,6 +55,13 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
         height={logoHeight}
         className="object-contain max-h-full max-w-full"
         style={{ width: logoWidth, height: logoHeight }}
+        onError={(e) => {
+          // Fallback to alternative path if the primary path fails
+          const target = e.target as HTMLImageElement;
+          if (!target.src.endsWith('/Hackathon-2-Five-Phases/WebsiteLogo.svg')) {
+            target.src = '/Hackathon-2-Five-Phases/WebsiteLogo.svg';
+          }
+        }}
       />
     </div>
   );
