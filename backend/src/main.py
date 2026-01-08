@@ -120,11 +120,19 @@ from .api.project_router import router as project_router
 from .api.task_router import router as task_router
 from .api.dashboard_router import router as dashboard_router
 
+# Include API routes with version prefix (for formal API access)
 app.include_router(auth_router, prefix=settings.api_v1_str, tags=["Authentication"])
 app.include_router(user_router, prefix=settings.api_v1_str, tags=["Users"])
 app.include_router(project_router, prefix=settings.api_v1_str, tags=["Projects"])
 app.include_router(task_router, prefix=settings.api_v1_str, tags=["Tasks"])
 app.include_router(dashboard_router, prefix=settings.api_v1_str, tags=["Dashboard"])
+
+# Include API routes without version prefix (for Hugging Face Space direct access)
+app.include_router(auth_router, tags=["Authentication (Direct)"])
+app.include_router(user_router, tags=["Users (Direct)"])
+app.include_router(project_router, tags=["Projects (Direct)"])
+app.include_router(task_router, tags=["Tasks (Direct)"])
+app.include_router(dashboard_router, tags=["Dashboard (Direct)"])
 
 
 # Development entry point
