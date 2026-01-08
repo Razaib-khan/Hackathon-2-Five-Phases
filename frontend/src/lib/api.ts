@@ -69,7 +69,17 @@ export async function login(email: string, password: string) {
 
 export async function signup(email: string, password: string) {
   // Generate username from email since the auth-context calls this with just email/password
-  const username = email.split('@')[0];
+  // Sanitize username to comply with validation rules: only letters, numbers, underscores, hyphens
+  let username = email.split('@')[0];
+  // Replace any invalid characters with underscores
+  username = username.replace(/[^a-zA-Z0-9_-]/g, '_');
+  // Ensure it meets length requirements (3-50 chars)
+  if (username.length < 3) {
+    username = username + '___'.substring(0, 3 - username.length);  // Pad if too short
+  } else if (username.length > 50) {
+    username = username.substring(0, 50);  // Truncate if too long
+  }
+
   const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
     method: 'POST',
     body: JSON.stringify({
