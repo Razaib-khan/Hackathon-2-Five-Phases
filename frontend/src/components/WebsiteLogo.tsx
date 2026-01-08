@@ -33,14 +33,21 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
       logoHeight = 60;
   }
 
+  // For GitHub Pages deployment, the image path needs to include the repository name
+  // when deployed to a subdirectory like https://username.github.io/repository-name/
+  const logoPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/Hackathon-2-Five-Phases')
+    ? '/Hackathon-2-Five-Phases/WebsiteLogo.svg'
+    : '/WebsiteLogo.svg';
+
   return (
     <div className={`flex items-center ${className}`}>
       <img
-        src="/WebsiteLogo.svg"
+        src={logoPath}
         alt="AIDO Logo"
         width={logoWidth}
         height={logoHeight}
         className="object-contain max-h-full max-w-full"
+        style={{ width: logoWidth, height: logoHeight }}
       />
     </div>
   );
