@@ -24,21 +24,31 @@ if database_url:
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 # Import all models to ensure they're registered with SQLModel
 # This will be updated when models are created
 try:
-    from models.user import User
-    from models.task import Task
-    from models.tag import Tag
-    from models.subtask import Subtask
-    from models.user_settings import UserSettings
+    from src.models.user import User
+    from src.models.task import Task
+    from src.models.tag import Tag
+    from src.models.subtask import Subtask
+    from src.models.user_settings import UserSettings
+    from src.models.role import Role
+    from src.models.permission import Permission
+    from src.models.project import Project
+    from src.models.user_project import UserProject
+    from src.models.user_settings import UserSettings
 except ImportError:
     # Models not yet created, skip for now
     pass
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = None
+from sqlmodel import SQLModel
+target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
