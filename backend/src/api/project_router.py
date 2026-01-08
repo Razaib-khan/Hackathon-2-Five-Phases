@@ -30,7 +30,7 @@ async def create_project(
         ProjectResponse object with the created project's information
     """
     project = ProjectService.create_project(session, project_data, current_user.id)
-    return ProjectResponse.from_orm(project)
+    return ProjectResponse.model_validate(project)
 
 
 @router.get("/projects/", response_model=List[ProjectResponse], summary="List user's projects")
@@ -53,7 +53,7 @@ async def list_projects(
         List of ProjectResponse objects
     """
     projects = ProjectService.get_projects_by_owner(session, current_user.id, skip=skip, limit=limit)
-    return [ProjectResponse.from_orm(project) for project in projects]
+    return [ProjectResponse.model_validate(project) for project in projects]
 
 
 @router.get("/projects/{project_id}", response_model=ProjectResponse, summary="Get specific project")
@@ -87,7 +87,7 @@ async def get_project(
             detail="Not authorized to access this project"
         )
 
-    return ProjectResponse.from_orm(project)
+    return ProjectResponse.model_validate(project)
 
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse, summary="Update a project")
@@ -130,7 +130,7 @@ async def update_project(
             detail="Project not found"
         )
 
-    return ProjectResponse.from_orm(updated_project)
+    return ProjectResponse.model_validate(updated_project)
 
 
 @router.delete("/projects/{project_id}", summary="Delete a project")
@@ -212,7 +212,7 @@ async def activate_project(
             detail="Project not found"
         )
 
-    return ProjectResponse.from_orm(activated_project)
+    return ProjectResponse.model_validate(activated_project)
 
 
 @router.post("/projects/{project_id}/deactivate", response_model=ProjectResponse, summary="Deactivate a project")
@@ -253,4 +253,4 @@ async def deactivate_project(
             detail="Project not found"
         )
 
-    return ProjectResponse.from_orm(deactivated_project)
+    return ProjectResponse.model_validate(deactivated_project)

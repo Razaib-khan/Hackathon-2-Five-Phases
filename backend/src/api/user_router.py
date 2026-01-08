@@ -24,7 +24,7 @@ async def get_current_user(
     Returns:
         UserResponse object with current user's information
     """
-    return UserResponse.from_orm(current_user)
+    return UserResponse.model_validate(current_user)
 
 
 @router.put("/users/me", response_model=UserResponse, summary="Update current user")
@@ -50,7 +50,7 @@ async def update_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return UserResponse.from_orm(updated_user)
+    return UserResponse.model_validate(updated_user)
 
 
 @router.get("/users/{user_id}", response_model=UserResponse, summary="Get specific user")
@@ -78,7 +78,7 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 
 @router.get("/users/", response_model=List[UserResponse], summary="List users")
@@ -103,7 +103,7 @@ async def list_users(
     # In a real implementation, you might want to check permissions
     # to see if the current user can list other users
     users = UserService.get_users(session, skip=skip, limit=limit)
-    return [UserResponse.from_orm(user) for user in users]
+    return [UserResponse.model_validate(user) for user in users]
 
 
 @router.delete("/users/me", summary="Deactivate current user account")
@@ -151,7 +151,7 @@ async def activate_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return UserResponse.from_orm(activated_user)
+    return UserResponse.model_validate(activated_user)
 
 
 @router.post("/users/me/verify", response_model=UserResponse, summary="Verify current user account")
@@ -175,4 +175,4 @@ async def verify_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return UserResponse.from_orm(verified_user)
+    return UserResponse.model_validate(verified_user)

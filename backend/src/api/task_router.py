@@ -47,7 +47,7 @@ async def create_task(
         )
 
     task = TaskService.create_task(session, task_data, current_user.id)
-    return TaskResponse.from_orm(task)
+    return TaskResponse.model_validate(task)
 
 
 @router.get("/tasks/", response_model=List[TaskResponse], summary="List user's tasks")
@@ -78,7 +78,7 @@ async def list_tasks(
     # Combine both lists, removing duplicates
     all_tasks = list(set(created_tasks + assigned_tasks))
 
-    return [TaskResponse.from_orm(task) for task in all_tasks]
+    return [TaskResponse.model_validate(task) for task in all_tasks]
 
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse, summary="Get specific task")
@@ -113,7 +113,7 @@ async def get_task(
             detail="Not authorized to access this task"
         )
 
-    return TaskResponse.from_orm(task)
+    return TaskResponse.model_validate(task)
 
 
 @router.put("/tasks/{task_id}", response_model=TaskResponse, summary="Update a task")
@@ -166,7 +166,7 @@ async def update_task(
             detail="Task not found"
         )
 
-    return TaskResponse.from_orm(updated_task)
+    return TaskResponse.model_validate(updated_task)
 
 
 @router.delete("/tasks/{task_id}", summary="Delete a task")
@@ -254,4 +254,4 @@ async def update_task_status(
             detail="Task not found"
         )
 
-    return TaskResponse.from_orm(updated_task)
+    return TaskResponse.model_validate(updated_task)
