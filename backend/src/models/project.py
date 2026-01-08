@@ -2,7 +2,6 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy import DateTime, func
-from uuid import UUID
 from .base import Base
 
 
@@ -13,7 +12,7 @@ class Project(Base, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(nullable=False, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
-    owner_id: UUID = Field(foreign_key="users.id")
+    owner_id: int = Field(foreign_key="users.id")
     is_active: bool = Field(default=True)
 
     # Relationships
@@ -47,7 +46,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: int
-    owner_id: UUID
+    owner_id: int
     created_at: datetime
     updated_at: datetime
 

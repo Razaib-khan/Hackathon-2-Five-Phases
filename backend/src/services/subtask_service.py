@@ -14,8 +14,6 @@ Special Behavior:
 - When parent task.completed = TRUE, all subtasks auto-complete (handled in task_service)
 """
 
-from uuid import UUID
-
 from sqlmodel import Session, select, func
 
 from ..models.subtask import Subtask
@@ -31,8 +29,8 @@ class SubtaskService:
     @staticmethod
     def create_subtask(
         session: Session,
-        task_id: UUID,
-        user_id: UUID,
+        task_id: int,
+        user_id: int,
         data: SubtaskCreateRequest,
     ) -> Subtask:
         """
@@ -40,8 +38,8 @@ class SubtaskService:
 
         Args:
             session: Database session
-            task_id: Parent task UUID
-            user_id: Owner user UUID (for authorization)
+            task_id: Parent task ID
+            user_id: Owner user ID (for authorization)
             data: Subtask creation data
 
         Returns:
@@ -82,14 +80,14 @@ class SubtaskService:
         return subtask
 
     @staticmethod
-    def get_subtask(session: Session, subtask_id: UUID, user_id: UUID) -> Subtask:
+    def get_subtask(session: Session, subtask_id: int, user_id: int) -> Subtask:
         """
         Get a single subtask by ID.
 
         Args:
             session: Database session
-            subtask_id: Subtask UUID
-            user_id: Owner user UUID (for authorization via parent task)
+            subtask_id: Subtask ID
+            user_id: Owner user ID (for authorization via parent task)
 
         Returns:
             Subtask instance
@@ -112,8 +110,8 @@ class SubtaskService:
     @staticmethod
     def update_subtask(
         session: Session,
-        subtask_id: UUID,
-        user_id: UUID,
+        subtask_id: int,
+        user_id: int,
         data: SubtaskUpdateRequest,
     ) -> Subtask:
         """
@@ -121,8 +119,8 @@ class SubtaskService:
 
         Args:
             session: Database session
-            subtask_id: Subtask UUID
-            user_id: Owner user UUID (for authorization)
+            subtask_id: Subtask ID
+            user_id: Owner user ID (for authorization)
             data: Update data (all fields optional)
 
         Returns:
@@ -148,14 +146,14 @@ class SubtaskService:
         return subtask
 
     @staticmethod
-    def delete_subtask(session: Session, subtask_id: UUID, user_id: UUID) -> None:
+    def delete_subtask(session: Session, subtask_id: int, user_id: int) -> None:
         """
         Delete a subtask.
 
         Args:
             session: Database session
-            subtask_id: Subtask UUID
-            user_id: Owner user UUID (for authorization)
+            subtask_id: Subtask ID
+            user_id: Owner user ID (for authorization)
 
         Raises:
             ValueError: If subtask not found or doesn't belong to user
@@ -166,7 +164,7 @@ class SubtaskService:
         session.commit()
 
     @staticmethod
-    def complete_all_subtasks(session: Session, task_id: UUID) -> None:
+    def complete_all_subtasks(session: Session, task_id: int) -> None:
         """
         Mark all subtasks of a task as completed.
 
@@ -174,7 +172,7 @@ class SubtaskService:
 
         Args:
             session: Database session
-            task_id: Parent task UUID
+            task_id: Parent task ID
         """
         subtasks = session.exec(
             select(Subtask).where(Subtask.task_id == task_id)

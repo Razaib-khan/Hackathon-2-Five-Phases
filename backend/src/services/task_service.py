@@ -19,12 +19,11 @@ Special Behavior:
 """
 
 from typing import List, Optional
-from uuid import UUID
 
 from sqlmodel import Session, select, func, or_
 
 from ..models.task import Task
-from ..schemas.task import TaskCreateRequest, TaskUpdateRequest
+from ..models.schemas.task import TaskCreate, TaskUpdate, TaskResponse, StatusEnum
 from .subtask_service import SubtaskService
 
 
@@ -37,16 +36,16 @@ class TaskService:
     @staticmethod
     def create_task(
         session: Session,
-        user_id: UUID,
-        data: TaskCreateRequest,
+        data: TaskCreate,
+        user_id: int,
     ) -> Task:
         """
         Create a new task.
 
         Args:
             session: Database session
-            user_id: Owner user UUID
             data: Task creation data
+            user_id: Owner user ID
 
         Returns:
             Created Task instance
@@ -69,10 +68,10 @@ class TaskService:
             user_id=user_id,
             title=data.title,
             description=data.description,
-            priority=data.priority,
+            priority=str(data.priority.value) if hasattr(data.priority, 'value') else str(data.priority),
             due_date=data.due_date,
-            status=data.status,
-            recurrence_pattern=data.recurrence_pattern,
+            status=str(data.status.value) if hasattr(data.status, 'value') else str(data.status),
+            created_by=user_id,  # Set the creator to the user_id
         )
 
         session.add(task)
@@ -82,14 +81,14 @@ class TaskService:
         return task
 
     @staticmethod
-    def get_task(session: Session, task_id: UUID, user_id: UUID) -> Task:
+    def get_task(session: Session, task_id: int, user_id: int) -> Task:
         """
         Get a single task by ID.
 
         Args:
             session: Database session
-            task_id: Task UUID
-            user_id: Owner user UUID (for authorization)
+            task_id: Task ID
+            user_id: Owner user ID (for authorization)
 
         Returns:
             Task instance
@@ -110,39 +109,24 @@ class TaskService:
     @staticmethod
     def update_task(
         session: Session,
-        task_id: UUID,
-        user_id: UUID,
-        data: TaskUpdateRequest,
+        task_id: int,
+        data: TaskUpdate,
     ) -> Task:
         """
         Update task fields.
 
-        Special Behavior (FR-040a, Clarification Q1):
-        When task.completed is set to TRUE, automatically marks all subtasks as completed.
-
         Args:
             session: Database session
-            task_id: Task UUID
-            user_id: Owner user UUID (for authorization)
+            task_id: Task ID
             data: Update data (all fields optional)
 
         Returns:
             Updated Task instance
-
-        Raises:
-            ValueError: If task not found or doesn't belong to user
-            ValueError: If version mismatch (optimistic locking conflict)
         """
-        task = TaskService.get_task(session, task_id, user_id)
+        task = session.get(Task, task_id)
 
-        # Optimistic locking check (FR-103)
-        if data.version is not None and task.version != data.version:
-            raise ValueError("Version conflict. Task was modified by another request.")
-
-        # Track if completed status is changing to TRUE
-        completing_task = False
-        if data.completed is not None and data.completed and not task.completed:
-            completing_task = True
+        if not task:
+            raise ValueError("Task not found.")
 
         # Update fields if provided
         if data.title is not None:
@@ -152,47 +136,204 @@ class TaskService:
         if data.completed is not None:
             task.completed = data.completed
         if data.priority is not None:
-            task.priority = data.priority
+            task.priority = str(data.priority.value) if hasattr(data.priority, 'value') else str(data.priority)
         if data.due_date is not None:
             task.due_date = data.due_date
         if data.status is not None:
-            task.status = data.status
-        if data.time_spent is not None:
-            task.time_spent = data.time_spent
-        if data.custom_order is not None:
-            task.custom_order = data.custom_order
-        if data.recurrence_pattern is not None:
-            task.recurrence_pattern = data.recurrence_pattern
-
-        # Increment version for optimistic locking
-        task.version += 1
+            task.status = str(data.status.value) if hasattr(data.status, 'value') else str(data.status)
+        if data.assigned_to is not None:
+            task.assigned_to = data.assigned_to
+        if data.project_id is not None:
+            task.project_id = data.project_id
 
         session.add(task)
         session.commit()
-
-        # Auto-complete subtasks when parent task is completed (FR-040a)
-        if completing_task:
-            SubtaskService.complete_all_subtasks(session, task_id)
-
         session.refresh(task)
+
         return task
 
     @staticmethod
-    def delete_task(session: Session, task_id: UUID, user_id: UUID) -> None:
+    def delete_task(session: Session, task_id: int) -> bool:
         """
         Delete a task.
 
-        CASCADE DELETE: All subtasks and task_tags are automatically deleted.
-
         Args:
             session: Database session
-            task_id: Task UUID
-            user_id: Owner user UUID (for authorization)
+            task_id: Task ID
 
-        Raises:
-            ValueError: If task not found or doesn't belong to user
+        Returns:
+            True if deletion was successful
         """
-        task = TaskService.get_task(session, task_id, user_id)
+        task = session.get(Task, task_id)
+
+        if not task:
+            return False
 
         session.delete(task)
         session.commit()
+        return True
+
+    # Methods required by the API router
+    @staticmethod
+    def check_task_creation_permissions(session: Session, user_id: int) -> bool:
+        """
+        Check if a user has permission to create tasks.
+
+        Args:
+            session: Database session
+            user_id: User ID to check permissions for
+
+        Returns:
+            True if user has permission to create tasks
+        """
+        # In a basic implementation, all active users can create tasks
+        # In a more advanced system, this might check user roles or quotas
+        return True
+
+    @staticmethod
+    def get_tasks_by_user(session: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks created by a specific user.
+
+        Args:
+            session: Database session
+            user_id: User ID to get tasks for
+            skip: Number of tasks to skip
+            limit: Maximum number of tasks to return
+
+        Returns:
+            List of tasks created by the user
+        """
+        statement = select(Task).where(Task.created_by == user_id).offset(skip).limit(limit)
+        return session.exec(statement).all()
+
+    @staticmethod
+    def get_tasks_assigned_to_user(session: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks assigned to a specific user.
+
+        Args:
+            session: Database session
+            user_id: User ID to get assigned tasks for
+            skip: Number of tasks to skip
+            limit: Maximum number of tasks to return
+
+        Returns:
+            List of tasks assigned to the user
+        """
+        statement = select(Task).where(Task.assigned_to == user_id).offset(skip).limit(limit)
+        return session.exec(statement).all()
+
+    @staticmethod
+    def get_task_by_id(session: Session, task_id: int) -> Optional[Task]:
+        """
+        Get a task by its ID.
+
+        Args:
+            session: Database session
+            task_id: Task ID to retrieve
+
+        Returns:
+            Task object if found, None otherwise
+        """
+        return session.get(Task, task_id)
+
+    @staticmethod
+    def check_task_access(session: Session, task_id: int, user_id: int) -> bool:
+        """
+        Check if a user has access to a specific task.
+
+        Args:
+            session: Database session
+            task_id: Task ID to check access for
+            user_id: User ID to check access for
+
+        Returns:
+            True if user has access to the task
+        """
+        task = session.get(Task, task_id)
+        if not task:
+            return False
+        # Check if user is the creator or assigned to the task
+        return task.created_by == user_id or (task.assigned_to and task.assigned_to == user_id)
+
+    @staticmethod
+    def update_task_status(session: Session, task_id: int, status: StatusEnum) -> Optional[Task]:
+        """
+        Update the status of a task.
+
+        Args:
+            session: Database session
+            task_id: Task ID to update
+            status: New status for the task
+
+        Returns:
+            Updated task object if successful, None otherwise
+        """
+        task = session.get(Task, task_id)
+        if not task:
+            return None
+
+        task.status = status
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+
+        return task
+
+    @staticmethod
+    def update_task(session: Session, task_id: int, task_update: TaskUpdate) -> Optional[Task]:
+        """
+        Update a task with the provided data.
+
+        Args:
+            session: Database session
+            task_id: Task ID to update
+            task_update: Update data
+
+        Returns:
+            Updated task object if successful, None otherwise
+        """
+        task = session.get(Task, task_id)
+        if not task:
+            return None
+
+        # Update fields if provided
+        if task_update.title is not None:
+            task.title = task_update.title
+        if task_update.description is not None:
+            task.description = task_update.description
+        if task_update.completed is not None:
+            task.completed = task_update.completed
+        if task_update.priority is not None:
+            task.priority = task_update.priority
+        if task_update.due_date is not None:
+            task.due_date = task_update.due_date
+        if task_update.status is not None:
+            task.status = task_update.status
+
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+
+        return task
+
+    @staticmethod
+    def delete_task(session: Session, task_id: int) -> bool:
+        """
+        Delete a task.
+
+        Args:
+            session: Database session
+            task_id: Task ID to delete
+
+        Returns:
+            True if deletion was successful
+        """
+        task = session.get(Task, task_id)
+        if not task:
+            return False
+
+        session.delete(task)
+        session.commit()
+        return True

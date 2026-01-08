@@ -31,7 +31,7 @@ def get_password_hash(password: str) -> str:
 def authenticate_user(session: Session, username: str, password: str) -> Optional[User]:
     """Authenticate a user by username and password."""
     user = session.exec(select(User).where(User.username == username)).first()
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(password, user.password_hash):
         return None
     return user
 

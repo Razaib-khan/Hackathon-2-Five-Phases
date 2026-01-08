@@ -48,11 +48,15 @@ class Task(SQLModel, table=True):
         Index("ix_tasks_user_id_created_at", "user_id", "created_at"),
     )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id", index=True)
+    id: int = Field(default=None, primary_key=True)  # Integer ID to match API expectations
+    user_id: int = Field(foreign_key="users.id", index=True)  # Integer ID to match API expectations
     title: str = Field(max_length=200)
     description: Optional[str] = Field(default=None, max_length=1000)
     completed: bool = Field(default=False)
+
+    # Fields for API compatibility
+    created_by: int = Field(index=True)  # Integer ID for the creator
+    assigned_to: Optional[int] = Field(default=None, index=True)  # Integer ID for assignee
 
     # New fields for advanced features (Phase 1 migrations)
     priority: str = Field(default="none", max_length=10)  # high/medium/low/none

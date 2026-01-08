@@ -39,8 +39,8 @@ class Subtask(SQLModel, table=True):
 
     __tablename__ = "subtasks"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    task_id: UUID = Field(foreign_key="tasks.id", index=True)
+    id: int = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="tasks.id", index=True)
     title: str = Field(max_length=200)
     completed: bool = Field(default=False)
     order_index: int = Field(default=0)  # Position in checklist

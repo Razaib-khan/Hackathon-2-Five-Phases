@@ -119,7 +119,7 @@ class UserService:
         db_user = User(
             username=user_data.username,
             email=user_data.email,
-            hashed_password=hashed_password,
+            password_hash=hashed_password,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             is_active=True,

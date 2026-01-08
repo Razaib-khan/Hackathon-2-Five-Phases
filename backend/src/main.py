@@ -121,6 +121,12 @@ from .api.project_router import router as project_router
 from .api.task_router import router as task_router
 from .api.dashboard_router import router as dashboard_router
 
+# Import error handlers
+from .middleware.error_handler import add_error_handlers
+
+# Add error handlers to the app
+app = add_error_handlers(app)
+
 # Include API routes with version prefix (for formal API access)
 app.include_router(auth_router_legacy, prefix=settings.api_v1_str, tags=["Authentication (Legacy)"])
 app.include_router(auth_router, prefix=settings.api_v1_str, tags=["Authentication"])
