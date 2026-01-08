@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
 from ..models.user import User
@@ -71,8 +71,9 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-def get_current_user_from_token(token: str, session: Session) -> Optional[User]:
+def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[User]:
     """Get the current user from a token."""
+    token = credentials.credentials
     payload = verify_token(token)
     if payload is None:
         return None
@@ -81,8 +82,14 @@ def get_current_user_from_token(token: str, session: Session) -> Optional[User]:
     if username is None:
         return None
 
-    user = session.exec(select(User).where(User.username == username)).first()
-    return user
+    # We need to get the session in a different way since we can't inject it directly
+    # This function should be rewritten to use a different approach
+    from ..config.database import engine
+    from sqlmodel import Session as SQLModelSession
+
+    with SQLModelSession(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        return user
 
 
 def generate_verification_token() -> str:
