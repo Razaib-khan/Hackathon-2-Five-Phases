@@ -7,12 +7,17 @@ import { ViewProvider } from '@/contexts/ViewContext'
 import { FilterProvider } from '@/contexts/FilterContext'
 import { Toaster } from 'sonner'
 
-export const metadata: Metadata = {
-  title: 'AIDO Todo',
-  description: 'A modern task management application with JWT authentication',
-  icons: {
-    icon: 'favicon-32x32.png',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const basePath = process.env.GITHUB_PAGES ? '/Hackathon-2-Five-Phases' : '';
+  const iconPath = `${basePath}/favicon-32x32.png`;
+
+  return {
+    title: 'AIDO Todo',
+    description: 'A modern task management application with JWT authentication',
+    icons: {
+      icon: iconPath,
+    },
+  };
 }
 
 export default function RootLayout({
