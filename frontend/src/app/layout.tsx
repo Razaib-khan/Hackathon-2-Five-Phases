@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'AIDO Todo',
   description: 'A modern task management application with JWT authentication',
   icons: {
-    icon: '/favicon-32x32.png',
+    icon: 'favicon-32x32.png',
   },
 }
 
