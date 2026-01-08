@@ -33,11 +33,8 @@ const WebsiteLogo: React.FC<WebsiteLogoProps> = ({ size = 'auth', width, height,
       logoHeight = 60;
   }
 
-  // For GitHub Pages deployment, the image path needs to include the repository name
-  // when deployed to a subdirectory like https://username.github.io/repository-name/
-  const logoPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/Hackathon-2-Five-Phases')
-    ? '/Hackathon-2-Five-Phases/WebsiteLogo.svg'
-    : '/WebsiteLogo.svg';
+  // Use simple path - Next.js assetPrefix will handle GitHub Pages path adjustment
+  const logoPath = '/WebsiteLogo.svg';
 
   return (
     <div className={`flex items-center ${className}`}>

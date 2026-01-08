@@ -11,6 +11,7 @@ const nextConfig = {
   // GitHub Pages configuration for static export
   output: process.env.GITHUB_PAGES ? 'export' : 'standalone',
   basePath: process.env.GITHUB_PAGES ? '/Hackathon-2-Five-Phases' : '',
+  assetPrefix: process.env.GITHUB_PAGES ? '/Hackathon-2-Five-Phases/' : '',
   trailingSlash: true,
 
   // Image optimization for static export
