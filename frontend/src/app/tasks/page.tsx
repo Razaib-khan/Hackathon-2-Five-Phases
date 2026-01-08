@@ -101,7 +101,7 @@ export default function TasksPage() {
 
     setIsSubmitting(true);
     try {
-      await updateTask(editingTask.id, data);
+      await updateTask(editingTask.id.toString(), data);
       setEditingTask(null);
       fetchTasks();
     } finally {
@@ -117,7 +117,7 @@ export default function TasksPage() {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
 
     try {
-      const success = await toggleComplete(task.id);
+      const success = await toggleComplete(task.id.toString());
       if (success) {
         setTasks((prev) =>
           prev.map((t) =>
@@ -135,7 +135,7 @@ export default function TasksPage() {
     if (!user || !deletingTask) return;
 
     try {
-      const success = await deleteTask(deletingTask.id);
+      const success = await deleteTask(deletingTask.id.toString());
       if (success) {
         setDeletingTask(null);
         fetchTasks();

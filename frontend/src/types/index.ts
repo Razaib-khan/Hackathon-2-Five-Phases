@@ -30,6 +30,9 @@ export interface Task {
   due_date?: string; // ISO 8601 date string
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
+  completed?: boolean; // Track completion separately from status
+  time_spent?: number; // Track time spent on task
+  custom_order?: number; // Custom ordering property
   estimated_time?: number; // in minutes
   tags?: string[]; // array of tag IDs
   subtasks?: Subtask[];
@@ -104,9 +107,10 @@ export interface RegisterFormData {
 
 // Task filters
 export interface TaskFilters {
+  completed?: boolean;
   status?: 'todo' | 'in_progress' | 'done' | 'blocked';
   search?: string;
-  sort_by?: 'created_at' | 'title' | 'status';
+  sort_by?: 'created_at' | 'title' | 'status' | 'completed';
   sort_order?: 'asc' | 'desc';
   page?: number;
   page_size?: number;

@@ -13,7 +13,9 @@ export interface Task {
   due_date?: string; // ISO 8601 date string
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
-  // Remove completed field - use status instead
+  completed?: boolean; // Track completion separately from status
+  time_spent?: number; // Track time spent on task
+  custom_order?: number; // Custom ordering property
   estimated_time?: number; // in minutes
   tags?: string[]; // array of tag IDs
   subtasks?: Subtask[];

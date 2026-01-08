@@ -31,12 +31,14 @@ const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low', color: 'text-blue-600' },
   { value: 'medium', label: 'Medium', color: 'text-yellow-600' },
   { value: 'high', label: 'High', color: 'text-red-600' },
+  { value: 'urgent', label: 'Urgent', color: 'text-purple-600' },
 ]
 
 const STATUS_OPTIONS = [
   { value: 'todo', label: 'To Do', color: 'text-gray-600' },
   { value: 'in_progress', label: 'In Progress', color: 'text-blue-600' },
   { value: 'done', label: 'Done', color: 'text-green-600' },
+  { value: 'blocked', label: 'Blocked', color: 'text-red-600' },
 ]
 
 export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialogProps) {
@@ -51,15 +53,15 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<'high' | 'medium' | 'low' | 'none'>('none')
-  const [status, setStatus] = useState<'todo' | 'in_progress' | 'done'>('todo')
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low' | 'urgent' | 'none'>('none')
+  const [status, setStatus] = useState<'todo' | 'in_progress' | 'done' | 'blocked'>('todo')
   const [dueDate, setDueDate] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   // Load task data
   useEffect(() => {
     if (taskId) {
-      const foundTask = tasks.find((t) => t.id === taskId)
+      const foundTask = tasks.find((t) => t.id.toString() === taskId)
       if (foundTask) {
         setTask(foundTask)
         setTitle(foundTask.title)
@@ -67,7 +69,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
         setPriority(foundTask.priority)
         setStatus(foundTask.status)
         setDueDate(foundTask.due_date ? format(parseISO(foundTask.due_date), "yyyy-MM-dd'T'HH:mm") : '')
-        setSelectedTagIds(foundTask.tags?.map((t) => t.id) || [])
+        setSelectedTagIds(foundTask.tags || [])
       }
     }
   }, [taskId, tasks])
@@ -98,7 +100,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
       tag_ids: selectedTagIds,
     }
 
-    const updated = await updateTask(task.id, updates)
+    const updated = await updateTask(task.id.toString(), updates)
 
     setIsSaving(false)
 
@@ -110,7 +112,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
   }
 
   const handleDelete = async () => {
-    const success = await deleteTask(task.id)
+    const success = await deleteTask(task.id.toString())
     if (success) {
       onClose()
     }
@@ -128,7 +130,8 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
     }
   }
 
-  const formatDuration = (minutes: number): string => {
+  const formatDuration = (minutes: number | undefined): string => {
+    if (!minutes) return '0m'
     if (minutes < 60) return `${minutes}m`
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
@@ -170,7 +173,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
                     setPriority(task.priority)
                     setStatus(task.status)
                     setDueDate(task.due_date ? format(parseISO(task.due_date), "yyyy-MM-dd'T'HH:mm") : '')
-                    setSelectedTagIds(task.tags?.map((t) => t.id) || [])
+                    setSelectedTagIds(task.tags || [])
                   }}
                   className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
                   disabled={isSaving}
@@ -310,14 +313,14 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
           </div>
 
           {/* Time Spent */}
-          {!isEditing && task.time_spent > 0 && (
+          {!isEditing && task.time_spent != null && task.time_spent > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <Clock className="h-4 w-4 inline mr-1" />
                 Time Spent
               </label>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                {formatDuration(task.time_spent)}
+                {task.time_spent !== undefined ? formatDuration(task.time_spent) : '0m'}
               </p>
             </div>
           )}
@@ -357,20 +360,26 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
             ) : (
               <div className="flex flex-wrap gap-2">
                 {task.tags && task.tags.length > 0 ? (
-                  task.tags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
-                      style={{
-                        backgroundColor: `${tag.color}20`,
-                        color: tag.color,
-                        borderWidth: '1px',
-                        borderColor: `${tag.color}40`,
-                      }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))
+                  task.tags.map((tagId) => {
+                    // Find the actual tag object from available tags
+                    const tag = availableTags.find(t => t.id === tagId);
+                    if (!tag) return null;
+
+                    return (
+                      <span
+                        key={tag.id}
+                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                        style={{
+                          backgroundColor: `${tag.color}20`,
+                          color: tag.color,
+                          borderWidth: '1px',
+                          borderColor: `${tag.color}40`,
+                        }}
+                      >
+                        {tag.name}
+                      </span>
+                    );
+                  }).filter(Boolean) // Remove null elements
                 ) : (
                   <p className="text-sm text-gray-400 italic">No tags</p>
                 )}
@@ -386,7 +395,7 @@ export function TaskDetailsDialog({ taskId, userId, onClose }: TaskDetailsDialog
                 Subtasks
               </label>
               <SubtaskList
-                taskId={task.id}
+                taskId={task.id.toString()}
                 subtasks={task.subtasks || []}
                 onUpdate={() => fetchTasks({})}
               />

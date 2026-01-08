@@ -24,7 +24,7 @@ type SortBy = 'created_at' | 'due_date' | 'priority' | 'custom_order' | 'title'
 type SortOrder = 'asc' | 'desc'
 type GroupBy = 'none' | 'priority' | 'status' | 'due_date'
 
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2, none: 3 }
+const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
 const STATUS_ORDER = { todo: 0, in_progress: 1, done: 2 }
 
 interface ListViewProps {

@@ -41,6 +41,9 @@ export interface Task {
   due_date?: string // ISO 8601 date string
   created_at: string // ISO 8601 date string
   updated_at: string // ISO 8601 date string
+  completed?: boolean; // Track completion separately from status
+  time_spent?: number; // Track time spent on task
+  custom_order?: number; // Custom ordering property
   estimated_time?: number // in minutes
   tags?: string[] // array of tag IDs
   subtasks?: Subtask[]
@@ -73,7 +76,7 @@ export function useTasks(): UseTasksReturn {
     try {
       const response = await api.getTasks(filters)
       setTasks(response.tasks as Task[])
-      setTotal(response.total)
+      setTotal(response.total || 0)
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch tasks')
       setError(error)
@@ -104,19 +107,19 @@ export function useTasks(): UseTasksReturn {
   const updateTask = useCallback(
     async (taskId: string, data: any): Promise<Task | null> => {
       // Store original task for rollback
-      const originalTask = tasks.find((t) => t.id === taskId)
+      const originalTask = tasks.find((t) => t.id.toString() === taskId)
 
       try {
         // Optimistic update
         setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, ...data } : t))
+          prev.map((t) => (t.id.toString() === taskId ? { ...t, ...data } : t))
         )
 
         const updatedTask = await api.updateTask(taskId, data)
 
         // Update with server response
         setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? (updatedTask as Task) : t))
+          prev.map((t) => (t.id.toString() === taskId ? (updatedTask as Task) : t))
         )
 
         toast.success('Task updated')
@@ -125,7 +128,7 @@ export function useTasks(): UseTasksReturn {
         // Rollback optimistic update
         if (originalTask) {
           setTasks((prev) =>
-            prev.map((t) => (t.id === taskId ? originalTask : t))
+            prev.map((t) => (t.id.toString() === taskId ? originalTask : t))
           )
         }
 
@@ -155,7 +158,7 @@ export function useTasks(): UseTasksReturn {
 
       try {
         // Optimistic update
-        setTasks((prev) => prev.filter((t) => t.id !== taskId))
+        setTasks((prev) => prev.filter((t) => t.id.toString() !== taskId))
         setTotal((prev) => prev - 1)
 
         await api.deleteTask(taskId)
@@ -177,7 +180,7 @@ export function useTasks(): UseTasksReturn {
 
   const toggleComplete = useCallback(
     async (taskId: string): Promise<boolean> => {
-      const task = tasks.find((t) => t.id === taskId)
+      const task = tasks.find((t) => t.id.toString() === taskId)
       if (!task) return false
 
       // Toggle status between 'todo' and 'done' based on current status
@@ -190,7 +193,7 @@ export function useTasks(): UseTasksReturn {
         // Optimistic update
         setTasks((prev) =>
           prev.map((t) =>
-            t.id === taskId ? { ...t, status: newStatus } : t
+            t.id.toString() === taskId ? { ...t, status: newStatus } : t
           )
         )
 
@@ -200,7 +203,7 @@ export function useTasks(): UseTasksReturn {
       } catch (err) {
         // Rollback
         setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? originalTask : t))
+          prev.map((t) => (t.id.toString() === taskId ? originalTask : t))
         )
 
         toast.error('Failed to update task')

@@ -84,7 +84,7 @@ function SortableTaskCard({
     >
       <TaskCard
         task={task}
-        onToggleComplete={(taskId) => onToggleComplete(taskId, task.completed)}
+        onToggleComplete={(taskId) => onToggleComplete(taskId, task.completed || task.status === 'done')}
         onClick={onClick}
         compact={false}
       />
@@ -133,7 +133,7 @@ export function KanbanView({ userId, onTaskClick }: KanbanViewProps) {
     const taskId = active.id as string
     const newStatus = over.id as StatusColumn
 
-    const task = tasks.find((t) => t.id === taskId)
+    const task = tasks.find((t) => t.id.toString() === taskId)
 
     if (!task || task.status === newStatus) return
 

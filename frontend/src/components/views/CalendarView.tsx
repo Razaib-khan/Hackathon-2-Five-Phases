@@ -221,7 +221,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                         key={task.id}
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleTaskClick(task.id)
+                          handleTaskClick(task.id.toString())
                         }}
                         className={`text-xs px-2 py-1 rounded truncate ${
                           task.completed
@@ -260,7 +260,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
             {selectedDayTasks.map((task) => (
               <div
                 key={task.id}
-                onClick={() => handleTaskClick(task.id)}
+                onClick={() => handleTaskClick(task.id.toString())}
                 className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
               >
                 <input
@@ -268,7 +268,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(task.id)
+                    toggleComplete(task.id.toString())
                   }}
                   className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
@@ -288,7 +288,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                     </p>
                   )}
                 </div>
-                {task.priority !== 'none' && (
+                {task.priority && task.priority !== 'low' && (
                   <span
                     className={`px-2 py-1 rounded-md text-xs font-medium ${
                       task.priority === 'high'
@@ -318,7 +318,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
             {unscheduledTasks.slice(0, 5).map((task) => (
               <div
                 key={task.id}
-                onClick={() => handleTaskClick(task.id)}
+                onClick={() => handleTaskClick(task.id.toString())}
                 className="flex items-center gap-3 p-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
               >
                 <input
@@ -326,7 +326,7 @@ export function CalendarView({ userId, onTaskClick }: CalendarViewProps) {
                   checked={task.completed}
                   onChange={(e) => {
                     e.stopPropagation()
-                    toggleComplete(task.id)
+                    toggleComplete(task.id.toString())
                   }}
                   className="h-4 w-4 rounded border-gray-300"
                 />

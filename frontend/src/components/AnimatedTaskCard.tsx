@@ -13,20 +13,7 @@
 import { motion, AnimatePresence } from 'motion/react'
 import { TaskCard } from './TaskCard'
 import { scaleVariants, cardAnimations } from '@/lib/animations'
-
-interface Task {
-  id: string
-  title: string
-  description?: string
-  completed: boolean
-  priority: 'high' | 'medium' | 'low' | 'none'
-  due_date?: string
-  status: 'todo' | 'in_progress' | 'done'
-  time_spent: number
-  tags?: Array<{ id: string; name: string; color: string }>
-  subtask_count?: number
-  completed_subtask_count?: number
-}
+import type { Task } from '@/types'
 
 interface AnimatedTaskCardProps {
   task: Task
