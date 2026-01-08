@@ -22,7 +22,7 @@ class Role(Base, table=True):
     __tablename__ = "roles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(sa_column=Column(unique=True, nullable=False, max_length=50))
+    name: str = Field(unique=True, nullable=False, max_length=50)
     description: Optional[str] = Field(default=None, max_length=200)
     is_active: bool = Field(default=True)
 

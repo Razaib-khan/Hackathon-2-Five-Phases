@@ -18,10 +18,10 @@ class Permission(Base, table=True):
     __tablename__ = "permissions"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(sa_column=Column(unique=True, nullable=False, max_length=50))
+    name: str = Field(unique=True, nullable=False, max_length=50)
     description: Optional[str] = Field(default=None, max_length=200)
-    resource: str = Field(sa_column=Column(nullable=False, max_length=50))
-    action: str = Field(sa_column=Column(nullable=False, max_length=20))
+    resource: str = Field(nullable=False, max_length=50)
+    action: str = Field(nullable=False, max_length=20)
 
     # Relationships
     roles: List["Role"] = Relationship(back_populates="permissions", link_model=RolePermissionLink)
