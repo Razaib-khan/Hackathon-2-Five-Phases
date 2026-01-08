@@ -17,11 +17,13 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+# Import for runtime use
+from .role import Role, UserRoleLink
+
 if TYPE_CHECKING:
     from .task import Task
     from .tag import Tag
     from .user_settings import UserSettings
-    from .role import Role, UserRoleLink
 
 
 class User(SQLModel, table=True):
