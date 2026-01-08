@@ -56,7 +56,7 @@ export async function apiCall<T>(
 }
 
 export async function login(email: string, password: string) {
-  const data = await apiCall<any>('/auth/login', {
+  const data = await apiCall<any>('/login', {  // Changed to use simpler endpoint
     method: 'POST',
     body: JSON.stringify({ email, password }),
     skipAuth: true,
@@ -67,10 +67,16 @@ export async function login(email: string, password: string) {
   return data
 }
 
-export async function signup(email: string, password: string) {
-  const data = await apiCall<any>('/auth/register', {
+export async function signup(username: string, email: string, password: string, firstName?: string, lastName?: string) {
+  const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+      first_name: firstName || '',
+      last_name: lastName || ''
+    }),
     skipAuth: true,
   })
   if (data.access_token) {
@@ -80,7 +86,9 @@ export async function signup(email: string, password: string) {
 }
 
 export async function register(email: string, password: string) {
-  return signup(email, password)
+  // Generate username from email (before @ symbol) or use a default
+  const username = email.split('@')[0];
+  return signup(username, email, password, '', '')  // Pass empty strings for firstName and lastName
 }
 
 export async function logout() {
