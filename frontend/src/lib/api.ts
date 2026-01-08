@@ -67,15 +67,35 @@ export async function login(email: string, password: string) {
   return data
 }
 
-export async function signup(username: string, email: string, password: string, firstName?: string, lastName?: string) {
+export async function signup(email: string, password: string) {
+  // Generate username from email since the auth-context calls this with just email/password
+  const username = email.split('@')[0];
   const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
     method: 'POST',
     body: JSON.stringify({
       username,
       email,
       password,
-      first_name: firstName || '',
-      last_name: lastName || ''
+      first_name: '',
+      last_name: ''
+    }),
+    skipAuth: true,
+  })
+  if (data.access_token) {
+    localStorage?.setItem('authToken', data.access_token)
+  }
+  return data
+}
+
+export async function signupWithDetails(username: string, email: string, password: string, firstName: string = '', lastName: string = '') {
+  const data = await apiCall<any>('/auth/register', {  // Use the endpoint that expects full user data
+    method: 'POST',
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName
     }),
     skipAuth: true,
   })
@@ -86,9 +106,8 @@ export async function signup(username: string, email: string, password: string, 
 }
 
 export async function register(email: string, password: string) {
-  // Generate username from email (before @ symbol) or use a default
-  const username = email.split('@')[0];
-  return signup(username, email, password, '', '')  // Pass empty strings for firstName and lastName
+  // Use the signup function which generates username from email
+  return signup(email, password)
 }
 
 export async function logout() {
