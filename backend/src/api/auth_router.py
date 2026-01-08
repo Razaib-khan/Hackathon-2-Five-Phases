@@ -31,7 +31,7 @@ async def register_user(
     """
     try:
         user = AuthService.register_user(session, user_data)
-        return UserResponse.from_orm(user)
+        return UserResponse.model_validate(user)
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
