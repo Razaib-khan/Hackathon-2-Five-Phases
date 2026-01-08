@@ -1,8 +1,12 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 from sqlalchemy import DateTime, func, Column
 from .base import Base
+
+if TYPE_CHECKING:
+    from .user import User
+    from .permission import Permission
 
 
 # Association table for many-to-many relationship between users and roles
@@ -23,8 +27,8 @@ class Role(Base, table=True):
     is_active: bool = Field(default=True)
 
     # Relationships
-    users: List["User"] = Relationship(back_populates="roles", link_model=UserRoleLink)
-    permissions: List["Permission"] = Relationship(back_populates="roles", link_model="RolePermissionLink")
+    users: List["User"] = Relationship(back_populates="roles", link_model="UserRoleLink")
+    permissions: List["Permission"] = Relationship(back_populates="roles")
 
 
 # Pydantic models for API requests/responses
