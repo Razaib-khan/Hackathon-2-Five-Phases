@@ -1,252 +1,236 @@
----
-title: AIDO Todo API
-emoji: ✅
-colorFrom: blue
-colorTo: purple
-sdk: docker
-app_port: 7860
-pinned: false
----
+# Five Phase Hackathon Platform
 
-# AIDO - AI-Powered Interactive Task Manager
+A comprehensive platform for managing hackathons through five distinct phases: Registration, Ideation, Development, Submission, and Presentation/Judging.
 
-A modern, full-stack task management application with JWT authentication, built with:
-- **Frontend:** Next.js 15 (React 19) + TypeScript + Tailwind CSS
-- **Backend:** FastAPI + PostgreSQL (Neon)
-- **Deployment:** GitHub Pages + Hugging Face Spaces + Docker
+## Features
 
-## 🚀 Live Deployments
+### User Story 1: Participant Registration
+- User registration and authentication with email/password
+- OAuth2 integration for Google and GitHub login
+- Password hashing and validation
+- User profile management
+- Email confirmation and GDPR compliance
 
-| Service | URL |
-|---------|-----|
-| **Frontend** | https://razaib-khan.github.io/Hackathon-2-Five-Phases/ |
-| **Backend API** | https://huggingface.co/spaces/Razaib123/aido-todo-api |
-| **Repository** | https://github.com/Razaib-khan/Hackathon-2-Five-Phases |
+### User Story 2: Phase Progression Tracking
+- Hackathon creation and management
+- Multiple phase types (Registration, Ideation, Development, Submission, Presentation, Judging, Results)
+- Phase scheduling and automatic transitions
+- Notification system for phase changes
+- Timeline visualization of hackathon phases
+- Countdown timers for phase deadlines
 
-## 📋 Features
+### User Story 3: Team Formation and Management
+- Team creation with customizable sizes
+- Team member invitations and role assignments
+- Team joining and leaving functionality
+- Team member management (leader can manage members)
+- Automatic team validation during hackathon registration
 
-### Frontend
-- 🎨 Modern UI with Tailwind CSS
-- 🔐 JWT Authentication (Login/Register)
-- ✏️ Create, Read, Update, Delete tasks
-- 🔍 Search and filter tasks
-- 📱 Responsive design
-- ⚡ Real-time updates
+### User Story 4: Project Submission and Presentation
+- Team-based project submissions
+- Multiple file uploads with cloud storage integration
+- Demo video and presentation deck links
+- Judge evaluation system with scoring
+- Category-based evaluations (Technical, Creativity, etc.)
+- Anonymous submissions for unbiased judging
+
+### User Story 5: Admin Management and Monitoring
+- User management (role assignment, activation/deactivation)
+- Hackathon management and creation
+- Comprehensive reporting system
+- Audit logging for security and compliance
+- Platform usage statistics
+- System health monitoring
+
+### Cross-Cutting Concerns
+- Comprehensive logging with JSON format
+- Rate limiting and security headers
+- Input validation and sanitization
+- Role-based access control (RBAC)
+- GDPR compliance features
+- API documentation with Swagger UI
+
+## Tech Stack
 
 ### Backend
-- 🔒 Secure JWT-based authentication
-- 📊 PostgreSQL database integration
-- 🚀 FastAPI with async support
-- 📝 RESTful API endpoints
-- ✅ Input validation with Pydantic
-- 🛡️ CORS enabled
+- Python 3.11+
+- FastAPI for web framework
+- SQLAlchemy ORM with PostgreSQL
+- Alembic for database migrations
+- Pydantic for data validation
+- JWT for authentication
+- OAuth2 for social login
 
-## 🛠️ Tech Stack
+### Database
+- PostgreSQL 15
+- UUID primary keys
+- Proper indexing and constraints
 
-**Frontend:**
-- Next.js 15.5.9
-- React 19
+### Frontend
+- Next.js 14
 - TypeScript
 - Tailwind CSS
-- Next.js App Router
+- React hooks and context
 
-**Backend:**
-- FastAPI
-- Uvicorn
-- SQLAlchemy
-- Pydantic
-- PostgreSQL (Neon)
+## API Endpoints
 
-**DevOps:**
-- Docker & Docker Compose
-- GitHub Actions
-- GitHub Pages
-- Hugging Face Spaces
+### Authentication
+- `POST /api/v1/auth/register` - Register a new user
+- `POST /api/v1/auth/login` - Login and get JWT token
+- `POST /api/v1/auth/logout` - Logout user
+- `GET /api/v1/auth/me` - Get current user profile
 
-## 📦 Local Setup
+### Hackathons & Phases
+- `POST /api/v1/hackathons` - Create a new hackathon
+- `GET /api/v1/hackathons` - Get all hackathons
+- `GET /api/v1/hackathons/{id}` - Get specific hackathon
+- `PUT /api/v1/hackathons/{id}` - Update hackathon
+- `POST /api/v1/hackathons/{id}/phases` - Create phase for hackathon
+- `GET /api/v1/hackathons/{id}/phases` - Get all phases for hackathon
+- `GET /api/v1/hackathons/{id}/current-phase` - Get current active phase
+
+### Teams
+- `POST /api/v1/teams` - Create a new team
+- `GET /api/v1/teams/{id}` - Get specific team
+- `PUT /api/v1/teams/{id}` - Update team
+- `DELETE /api/v1/teams/{id}` - Delete team
+- `POST /api/v1/teams/{id}/members` - Add member to team
+- `DELETE /api/v1/teams/{id}/members/{user_id}` - Remove member from team
+- `POST /api/v1/teams/{id}/invitations` - Send team invitation
+- `POST /api/v1/team-invitations/{id}/accept` - Accept team invitation
+
+### Submissions & Evaluations
+- `POST /api/v1/submissions` - Create a new submission
+- `GET /api/v1/submissions/{id}` - Get specific submission
+- `PUT /api/v1/submissions/{id}` - Update submission
+- `DELETE /api/v1/submissions/{id}` - Withdraw submission
+- `POST /api/v1/submissions/{id}/files` - Upload file to submission
+- `POST /api/v1/submissions/{id}/evaluations` - Evaluate submission
+- `GET /api/v1/submissions/{id}/score` - Get average score for submission
+
+### Notifications
+- `GET /api/v1/notifications` - Get user's notifications
+- `GET /api/v1/notifications/unread` - Get unread notifications
+- `POST /api/v1/notifications/{id}/read` - Mark notification as read
+- `GET /api/v1/notification-preferences` - Get notification preferences
+- `PUT /api/v1/notification-preferences` - Update notification preferences
+
+### Admin
+- `GET /api/v1/admin/users` - Get all users (admin only)
+- `PUT /api/v1/admin/users/{id}/role` - Update user role (admin only)
+- `GET /api/v1/admin/hackathons` - Get all hackathons (admin only)
+- `GET /api/v1/admin/reports/platform-usage` - Get platform usage report (admin only)
+- `GET /api/v1/admin/reports/system-health` - Get system health report (admin only)
+
+## Getting Started
 
 ### Prerequisites
 - Python 3.11+
-- Node.js 20+
-- Docker & Docker Compose
+- Node.js 18+
+- PostgreSQL 15+
+- Docker (optional)
 
-### Quick Start
+### Installation
 
-**Using Docker:**
+1. Clone the repository:
 ```bash
-docker-compose up
+git clone <repository-url>
+cd hackathon-platform
 ```
 
-**Manual Setup:**
-
-Backend:
+2. Set up backend:
 ```bash
 cd backend
 pip install -r requirements.txt
+cp .env.example .env
+# Update .env with your database credentials
+alembic upgrade head
 uvicorn src.main:app --reload
-# Runs on http://localhost:8000
 ```
 
-Frontend:
+3. Set up frontend:
 ```bash
 cd frontend
 npm install
+cp .env.local.example .env.local
 npm run dev
-# Runs on http://localhost:3000
 ```
 
-## 📚 API Endpoints
+### Environment Variables
 
-### Authentication
-- `POST /auth/login` - Login user
-- `POST /auth/register` - Register new user
-- `POST /auth/logout` - Logout user
-
-### Tasks
-- `GET /tasks` - List all tasks
-- `POST /tasks` - Create task
-- `GET /tasks/{id}` - Get task details
-- `PUT /tasks/{id}` - Update task
-- `DELETE /tasks/{id}` - Delete task
-
-### Health
-- `GET /health` - Health check
-
-## 🔐 Environment Variables
-
-**Backend (.env):**
+#### Backend (.env)
 ```
-DATABASE_URL=postgresql+psycopg://user:password@host/db
-JWT_SECRET=your-secret-key
-API_HOST=0.0.0.0
-API_PORT=8000
-FRONTEND_URL=http://localhost:3000
+DATABASE_URL=postgresql://username:password@localhost/dbname
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
 ```
 
-**Frontend (.env.local):**
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+## Security Features
 
-## 🚀 Deployment
+- JWT-based authentication with refresh tokens
+- Rate limiting to prevent abuse
+- Input validation and sanitization
+- SQL injection prevention via ORM
+- XSS protection with security headers
+- Secure password hashing with bcrypt
+- OAuth2 integration with secure providers
 
-### GitHub Pages (Frontend)
-- **Trigger:** Push to `main` (frontend/*)
-- **Workflow:** `.github/workflows/deploy-github-pages.yml`
-- **URL:** https://razaib-khan.github.io/Hackathon-2-Five-Phases/
+## Database Schema
 
-### Hugging Face Spaces (Backend)
-- **Trigger:** Push to `main` (backend/*)
-- **Workflow:** `.github/workflows/deploy-huggingface.yml`
-- **URL:** https://huggingface.co/spaces/Razaib123/aido-todo-api
-- **Docker:** Automatically built and deployed
+The platform uses a comprehensive database schema with the following main entities:
 
-### Local Docker
-```bash
-# Build and run
-docker-compose up --build
+- **Users**: Account management with roles and profiles
+- **Hackathons**: Events with multiple phases
+- **Phases**: Different stages of the hackathon lifecycle
+- **Teams**: Groups of participants working together
+- **Submissions**: Project deliverables from teams
+- **Evaluations**: Scoring and feedback from judges
+- **Notifications**: Communication system for updates
+- **Audit Logs**: Security and compliance tracking
 
-# Services
-Frontend: http://localhost:3000
-Backend: http://localhost:8000
-Database: localhost:5432
-```
+## Testing
 
-## 📊 Project Structure
-
-```
-├── frontend/                 # Next.js frontend
-│   ├── src/
-│   │   ├── app/             # App router pages
-│   │   ├── components/      # Reusable components
-│   │   ├── lib/             # Utilities (auth, API)
-│   │   └── types/           # TypeScript types
-│   ├── public/              # Static assets
-│   └── package.json
-│
-├── backend/                  # FastAPI backend
-│   ├── src/
-│   │   ├── main.py          # App entry point
-│   │   ├── api/             # Route handlers
-│   │   ├── db/              # Database setup
-│   │   ├── models/          # SQLAlchemy models
-│   │   └── schemas/         # Pydantic schemas
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env
-│
-├── .github/workflows/        # CI/CD pipelines
-├── docker-compose.yml        # Local dev stack
-└── README.md                # This file
-```
-
-## 🔄 CI/CD Workflows
-
-1. **Frontend CI/CD** - Lint, test, build, security scan
-2. **GitHub Pages** - Static site deployment
-3. **Hugging Face** - Docker backend deployment
-
-## 📝 Development
-
-### Frontend Development
-```bash
-cd frontend
-npm install
-npm run dev      # Development server
-npm run build    # Production build
-npm run lint     # ESLint
-npm test         # Unit tests
-```
-
-### Backend Development
+Run backend tests:
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+pytest
 ```
 
-## 🧪 Testing
-
+Run frontend tests:
 ```bash
-# Frontend
+cd frontend
 npm test
-
-# Backend
-pytest backend/tests/
 ```
 
-## 🔒 Security
+## Deployment
 
-- ✅ JWT authentication with secure tokens
-- ✅ Password hashing (bcrypt)
-- ✅ CORS configured
-- ✅ Environment variables for secrets
-- ✅ Input validation (Pydantic)
-- ✅ SQL injection protection (SQLAlchemy)
+The platform includes Docker configurations for easy deployment:
 
-## 📄 License
+1. Build the containers:
+```bash
+docker-compose build
+```
 
-MIT License - see LICENSE file for details
+2. Run the application:
+```bash
+docker-compose up -d
+```
 
-## 👤 Author
+## Contributing
 
-**Razaib Khan** - [@Razaib123](https://huggingface.co/Razaib123)
-
-## 🤝 Contributing
-
-Contributions welcome! Feel free to:
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Submit a pull request
+4. Add tests for new functionality
+5. Submit a pull request
 
-## 📞 Support
+## License
 
-- **GitHub Issues:** https://github.com/Razaib-khan/Hackathon-2-Five-Phases/issues
-- **Hugging Face Space:** https://huggingface.co/spaces/Razaib123/aido-todo-api
+This project is licensed under the MIT License.
 
----
+## Support
 
-**Made with ❤️ for the Hackathon**
+For support, please open an issue in the GitHub repository.

@@ -1,340 +1,269 @@
-"""
-Task Service Layer
-
-Implements business logic for task CRUD operations:
-- create_task: Create new task with 10,000 task limit enforcement (FR-106)
-- get_tasks: Retrieve tasks with filtering, pagination, search
-- get_task: Get single task by ID
-- update_task: Update task fields with auto-complete subtasks logic (FR-040a)
-- delete_task: Delete task (CASCADE removes subtasks)
-- bulk_update_tasks: Update multiple tasks at once
-- bulk_delete_tasks: Delete multiple tasks at once
-
-Limits:
-- Maximum 10,000 tasks per user (FR-106)
-- Maximum 50 tasks per bulk operation
-
-Special Behavior:
-- When task.completed set to TRUE, all subtasks auto-complete (FR-040a, Clarification Q1)
-"""
-
 from typing import List, Optional
-from uuid import UUID
-
-from sqlmodel import Session, select, func, or_
-
-from ..models.task import Task
-from ..models.schemas.task import TaskCreate, TaskUpdate, TaskResponse, StatusEnum
-from .subtask_service import SubtaskService
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+from datetime import datetime
+from ..models.task import Task, TaskTag, TaskTagAssociation, TaskPriority, TaskStatus
+from ..schemas.task import TaskCreate, TaskUpdate
 
 
 class TaskService:
-    """Service for task operations."""
-
-    MAX_TASKS_PER_USER = 10000  # FR-106
-    MAX_BULK_OPERATION = 50  # FR-048, FR-049
+    @staticmethod
+    def create_task(db: Session, task_data: TaskCreate, user_id: str) -> Task:
+        """
+        Create a new task
+        """
+        db_task = Task(
+            title=task_data.title,
+            description=task_data.description,
+            priority=task_data.priority,
+            status=TaskStatus.PENDING,
+            created_by=user_id,
+            assigned_to=task_data.assigned_to,
+            due_date=task_data.due_date,
+            is_public=task_data.is_public
+        )
+        db.add(db_task)
+        db.commit()
+        db.refresh(db_task)
+        return db_task
 
     @staticmethod
-    def create_task(
-        session: Session,
-        data: TaskCreate,
-        user_id: UUID,
-    ) -> Task:
+    def get_task_by_id(db: Session, task_id: str) -> Optional[Task]:
         """
-        Create a new task.
-
-        Args:
-            session: Database session
-            data: Task creation data
-            user_id: Owner user ID
-
-        Returns:
-            Created Task instance
-
-        Raises:
-            ValueError: If user has reached 10,000 task limit (FR-106)
+        Get a task by its ID
         """
-        # Check task limit
-        task_count = session.exec(
-            select(func.count(Task.id)).where(Task.user_id == user_id)
-        ).one()
+        return db.query(Task).filter(Task.id == task_id).first()
 
-        if task_count >= TaskService.MAX_TASKS_PER_USER:
-            raise ValueError(
-                f"Task limit reached. Maximum {TaskService.MAX_TASKS_PER_USER} tasks per user."
+    @staticmethod
+    def get_tasks_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks created by a specific user
+        """
+        return db.query(Task).filter(Task.created_by == user_id).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_assigned_tasks(db: Session, user_id: str, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks assigned to a specific user
+        """
+        return db.query(Task).filter(Task.assigned_to == user_id).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def update_task(db: Session, task_id: str, task_data: TaskUpdate) -> Optional[Task]:
+        """
+        Update a task
+        """
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        if db_task:
+            for field, value in task_data.dict(exclude_unset=True).items():
+                setattr(db_task, field, value)
+            # Update the updated_at timestamp
+            db_task.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(db_task)
+        return db_task
+
+    @staticmethod
+    def delete_task(db: Session, task_id: str) -> bool:
+        """
+        Delete a task
+        """
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        if db_task:
+            db.delete(db_task)
+            db.commit()
+            return True
+        return False
+
+    @staticmethod
+    def get_tasks_by_priority(db: Session, user_id: str, priority: TaskPriority, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks by priority for a specific user
+        """
+        return db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.priority == priority
+            )
+        ).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_tasks_by_priority_and_status(db: Session, user_id: str, priority: TaskPriority, status: TaskStatus, skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks by priority and status for a specific user
+        """
+        return db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.priority == priority,
+                Task.status == status
+            )
+        ).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_filtered_tasks(db: Session, user_id: str, priority: Optional[TaskPriority] = None,
+                          status: Optional[TaskStatus] = None, search: Optional[str] = None,
+                          skip: int = 0, limit: int = 100) -> List[Task]:
+        """
+        Get tasks with optimized filtering by priority, status, and search term
+        """
+        query = db.query(Task).filter(or_(Task.created_by == user_id, Task.assigned_to == user_id))
+
+        if priority:
+            query = query.filter(Task.priority == priority)
+
+        if status:
+            query = query.filter(Task.status == status)
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Task.title.ilike(search_term),
+                    Task.description.isnot(None) & Task.description.ilike(search_term)
+                )
             )
 
-        # Create task
-        task = Task(
-            user_id=user_id,
-            title=data.title,
-            description=data.description,
-            priority=str(data.priority.value) if hasattr(data.priority, 'value') else str(data.priority),
-            due_date=data.due_date,
-            status=str(data.status.value) if hasattr(data.status, 'value') else str(data.status),
-            created_by=user_id,  # Set the creator to the user_id
+        # Order by priority (critical first) and then by creation date (newest first)
+        from sqlalchemy import case
+        priority_order = case(
+            [(Task.priority == TaskPriority.CRITICAL, 0),
+             (Task.priority == TaskPriority.HIGH, 1),
+             (Task.priority == TaskPriority.MEDIUM, 2),
+             (Task.priority == TaskPriority.LOW, 3)],
+            else_=4
         )
 
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-
-        return task
+        return query.order_by(priority_order, Task.created_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
-    def get_task(session: Session, task_id: UUID, user_id: UUID) -> Task:
+    def get_tasks_by_status(db: Session, status: TaskStatus, skip: int = 0, limit: int = 100) -> List[Task]:
         """
-        Get a single task by ID.
-
-        Args:
-            session: Database session
-            task_id: Task ID
-            user_id: Owner user ID (for authorization)
-
-        Returns:
-            Task instance
-
-        Raises:
-            ValueError: If task not found or doesn't belong to user
+        Get tasks by status
         """
-        task = session.get(Task, task_id)
-
-        if not task:
-            raise ValueError("Task not found.")
-
-        if task.user_id != user_id:
-            raise ValueError("Unauthorized access to task.")
-
-        return task
+        return db.query(Task).filter(Task.status == status).offset(skip).limit(limit).all()
 
     @staticmethod
-    def update_task(
-        session: Session,
-        task_id: UUID,
-        data: TaskUpdate,
-    ) -> Task:
+    def search_tasks(db: Session, query: str, user_id: str, skip: int = 0, limit: int = 100) -> List[Task]:
         """
-        Update task fields.
-
-        Args:
-            session: Database session
-            task_id: Task ID
-            data: Update data (all fields optional)
-
-        Returns:
-            Updated Task instance
+        Search tasks by title or description for a specific user
         """
-        task = session.get(Task, task_id)
-
-        if not task:
-            raise ValueError("Task not found.")
-
-        # Update fields if provided
-        if data.title is not None:
-            task.title = data.title
-        if data.description is not None:
-            task.description = data.description
-        if data.completed is not None:
-            task.completed = data.completed
-        if data.priority is not None:
-            task.priority = str(data.priority.value) if hasattr(data.priority, 'value') else str(data.priority)
-        if data.due_date is not None:
-            task.due_date = data.due_date
-        if data.status is not None:
-            task.status = str(data.status.value) if hasattr(data.status, 'value') else str(data.status)
-        if data.assigned_to is not None:
-            task.assigned_to = data.assigned_to
-        if data.project_id is not None:
-            task.project_id = data.project_id
-
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-
-        return task
+        return db.query(Task).filter(
+            and_(
+                or_(
+                    Task.title.contains(query),
+                    Task.description.contains(query)
+                ),
+                or_(Task.created_by == user_id, Task.assigned_to == user_id)
+            )
+        ).offset(skip).limit(limit).all()
 
     @staticmethod
-    def delete_task(session: Session, task_id: UUID) -> bool:
+    def complete_task(db: Session, task_id: str) -> Optional[Task]:
         """
-        Delete a task.
-
-        Args:
-            session: Database session
-            task_id: Task ID
-
-        Returns:
-            True if deletion was successful
+        Mark a task as completed
         """
-        task = session.get(Task, task_id)
-
-        if not task:
-            return False
-
-        session.delete(task)
-        session.commit()
-        return True
-
-    # Methods required by the API router
-    @staticmethod
-    def check_task_creation_permissions(session: Session, user_id: UUID) -> bool:
-        """
-        Check if a user has permission to create tasks.
-
-        Args:
-            session: Database session
-            user_id: User ID to check permissions for
-
-        Returns:
-            True if user has permission to create tasks
-        """
-        # In a basic implementation, all active users can create tasks
-        # In a more advanced system, this might check user roles or quotas
-        return True
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        if db_task:
+            db_task.status = TaskStatus.COMPLETED
+            db_task.completed_at = datetime.utcnow()
+            db.commit()
+            db.refresh(db_task)
+        return db_task
 
     @staticmethod
-    def get_tasks_by_user(session: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Task]:
+    def assign_task(db: Session, task_id: str, assignee_id: str) -> Optional[Task]:
         """
-        Get tasks created by a specific user.
-
-        Args:
-            session: Database session
-            user_id: User ID to get tasks for
-            skip: Number of tasks to skip
-            limit: Maximum number of tasks to return
-
-        Returns:
-            List of tasks created by the user
+        Assign a task to a user
         """
-        statement = select(Task).where(Task.created_by == user_id).offset(skip).limit(limit)
-        return session.exec(statement).all()
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        if db_task:
+            db_task.assigned_to = assignee_id
+            db.commit()
+            db.refresh(db_task)
+        return db_task
 
     @staticmethod
-    def get_tasks_assigned_to_user(session: Session, user_id: UUID, skip: int = 0, limit: int = 100) -> List[Task]:
+    def get_all_user_tasks(db: Session, user_id: str, skip: int = 0, limit: int = 100) -> List[Task]:
         """
-        Get tasks assigned to a specific user.
-
-        Args:
-            session: Database session
-            user_id: User ID to get assigned tasks for
-            skip: Number of tasks to skip
-            limit: Maximum number of tasks to return
-
-        Returns:
-            List of tasks assigned to the user
+        Get all tasks related to a user (either created by or assigned to the user)
         """
-        statement = select(Task).where(Task.assigned_to == user_id).offset(skip).limit(limit)
-        return session.exec(statement).all()
+        return db.query(Task).filter(
+            or_(Task.created_by == user_id, Task.assigned_to == user_id)
+        ).offset(skip).limit(limit).all()
 
     @staticmethod
-    def get_task_by_id(session: Session, task_id: UUID) -> Optional[Task]:
+    def get_task_statistics(db: Session, user_id: str) -> dict:
         """
-        Get a task by its ID.
-
-        Args:
-            session: Database session
-            task_id: Task ID to retrieve
-
-        Returns:
-            Task object if found, None otherwise
+        Get task statistics for a user
         """
-        return session.get(Task, task_id)
+        total_tasks = db.query(Task).filter(
+            or_(Task.created_by == user_id, Task.assigned_to == user_id)
+        ).count()
+
+        completed_tasks = db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.status == TaskStatus.COMPLETED
+            )
+        ).count()
+
+        pending_tasks = db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.status == TaskStatus.PENDING
+            )
+        ).count()
+
+        in_progress_tasks = db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.status == TaskStatus.IN_PROGRESS
+            )
+        ).count()
+
+        critical_tasks = db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.priority == TaskPriority.CRITICAL
+            )
+        ).count()
+
+        return {
+            "total": total_tasks,
+            "completed": completed_tasks,
+            "pending": pending_tasks,
+            "in_progress": in_progress_tasks,
+            "critical": critical_tasks
+        }
 
     @staticmethod
-    def check_task_access(session: Session, task_id: UUID, user_id: UUID) -> bool:
+    def update_task_status(db: Session, task_id: str, status: TaskStatus) -> Optional[Task]:
         """
-        Check if a user has access to a specific task.
-
-        Args:
-            session: Database session
-            task_id: Task ID to check access for
-            user_id: User ID to check access for
-
-        Returns:
-            True if user has access to the task
+        Update the status of a task
         """
-        task = session.get(Task, task_id)
-        if not task:
-            return False
-        # Check if user is the creator or assigned to the task
-        return task.created_by == user_id or (task.assigned_to and task.assigned_to == user_id)
+        db_task = db.query(Task).filter(Task.id == task_id).first()
+        if db_task:
+            db_task.status = status
+            if status == TaskStatus.COMPLETED:
+                db_task.completed_at = datetime.utcnow()
+            elif status != TaskStatus.COMPLETED:
+                db_task.completed_at = None  # Reset completion time if status changes from completed
+            db.commit()
+            db.refresh(db_task)
+        return db_task
 
     @staticmethod
-    def update_task_status(session: Session, task_id: UUID, status: StatusEnum) -> Optional[Task]:
+    def get_overdue_tasks(db: Session, user_id: str) -> List[Task]:
         """
-        Update the status of a task.
-
-        Args:
-            session: Database session
-            task_id: Task ID to update
-            status: New status for the task
-
-        Returns:
-            Updated task object if successful, None otherwise
+        Get overdue tasks for a user
         """
-        task = session.get(Task, task_id)
-        if not task:
-            return None
+        from sqlalchemy import and_, or_, func
+        return db.query(Task).filter(
+            and_(
+                or_(Task.created_by == user_id, Task.assigned_to == user_id),
+                Task.due_date < datetime.utcnow(),
+                Task.status != TaskStatus.COMPLETED
+            )
+        ).all()
 
-        task.status = status
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-
-        return task
-
-    @staticmethod
-    def update_task(session: Session, task_id: UUID, task_update: TaskUpdate) -> Optional[Task]:
-        """
-        Update a task with the provided data.
-
-        Args:
-            session: Database session
-            task_id: Task ID to update
-            task_update: Update data
-
-        Returns:
-            Updated task object if successful, None otherwise
-        """
-        task = session.get(Task, task_id)
-        if not task:
-            return None
-
-        # Update fields if provided
-        if task_update.title is not None:
-            task.title = task_update.title
-        if task_update.description is not None:
-            task.description = task_update.description
-        if task_update.completed is not None:
-            task.completed = task_update.completed
-        if task_update.priority is not None:
-            task.priority = task_update.priority
-        if task_update.due_date is not None:
-            task.due_date = task_update.due_date
-        if task_update.status is not None:
-            task.status = task_update.status
-
-        session.add(task)
-        session.commit()
-        session.refresh(task)
-
-        return task
-
-    @staticmethod
-    def delete_task(session: Session, task_id: int) -> bool:
-        """
-        Delete a task.
-
-        Args:
-            session: Database session
-            task_id: Task ID to delete
-
-        Returns:
-            True if deletion was successful
-        """
-        task = session.get(Task, task_id)
-        if not task:
-            return False
-
-        session.delete(task)
-        session.commit()
-        return True

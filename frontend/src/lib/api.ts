@@ -1,399 +1,115 @@
-import { TaskCreateRequest, TaskUpdateRequest, TaskFilterOptions, TaskListResponse } from '@/models/task';
-import { TagCreateRequest, TagUpdateRequest, TagListResponse } from '@/models/tag';
-import { UserPreferences, UserPreferencesUpdateRequest } from '@/models/user-preferences';
+// API service for the Five Phase Hackathon Platform
 
-/**
- * API Client Utilities
- */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const API_URL = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL
-  : 'http://localhost:8000'
+class ApiService {
+  private baseUrl: string;
+  private token: string | null;
 
-interface FetchOptions extends RequestInit {
-  skipAuth?: boolean
-}
-
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage?.getItem('authToken') || null
-}
-
-export async function apiCall<T>(
-  endpoint: string,
-  options: FetchOptions = {},
-): Promise<T> {
-  const { skipAuth = false, ...fetchOptions } = options
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+    this.token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   }
 
-  if (fetchOptions.headers) {
-    if (typeof fetchOptions.headers === 'object' && !Array.isArray(fetchOptions.headers)) {
-      Object.assign(headers, fetchOptions.headers)
+  // Set authentication token
+  setToken(token: string) {
+    this.token = token;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('token', token);
     }
   }
 
-  if (!skipAuth) {
-    const token = getToken()
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
+  // Remove authentication token
+  removeToken() {
+    this.token = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
     }
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...fetchOptions,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => `API error: ${response.status}`);
-    throw new Error(`API error: ${response.status} - ${errorText}`);
-  }
-
-  return response.json()
-}
-
-export async function login(email: string, password: string) {
-  // Create form data for OAuth2PasswordRequestForm compliance
-  const formData = new FormData();
-  formData.append('username', email);  // Backend treats email as username
-  formData.append('password', password);
-
-  // Make the fetch request with form data
-  const response = await fetch(`${API_URL}/v1/auth/login`, {
-    method: 'POST',
-    body: formData,
-    // Don't set Content-Type header, let browser set it with boundary
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => `API error: ${response.status}`);
-    throw new Error(`API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  if (data.access_token) {
-    localStorage?.setItem('authToken', data.access_token);
-    // Store refresh token as well
-    if (data.refresh_token) {
-      localStorage?.setItem('refreshToken', data.refresh_token);
-    }
-    // Store token expiry time
-    if (data.expires_in) {
-      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
-    }
-  }
-  return data;
-}
-
-export async function signup(email: string, password: string) {
-  // Generate username from email since the auth-context calls this with just email/password
-  // Sanitize username to comply with validation rules: only letters, numbers, underscores, hyphens
-  let username = email.split('@')[0];
-  // Replace any invalid characters with underscores
-  username = username.replace(/[^a-zA-Z0-9_-]/g, '_');
-  // Ensure it meets length requirements (3-50 chars)
-  if (username.length < 3) {
-    username = username + '___'.substring(0, 3 - username.length);  // Pad if too short
-  } else if (username.length > 50) {
-    username = username.substring(0, 50);  // Truncate if too long
-  }
-
-  const data = await apiCall<any>('/v1/auth/register', {  // Use the endpoint that expects full user data
-    method: 'POST',
-    body: JSON.stringify({
-      username,
-      email,
-      password,
-      first_name: '',
-      last_name: ''
-    }),
-    skipAuth: true,
-  })
-  if (data.access_token) {
-    localStorage?.setItem('authToken', data.access_token)
-    // Store refresh token as well
-    if (data.refresh_token) {
-      localStorage?.setItem('refreshToken', data.refresh_token);
-    }
-    // Store token expiry time
-    if (data.expires_in) {
-      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
-    }
-  }
-  return data
-}
-
-export async function signupWithDetails(username: string, email: string, password: string, firstName: string = '', lastName: string = '') {
-  const data = await apiCall<any>('/v1/auth/register', {  // Use the endpoint that expects full user data
-    method: 'POST',
-    body: JSON.stringify({
-      username,
-      email,
-      password,
-      first_name: firstName,
-      last_name: lastName
-    }),
-    skipAuth: true,
-  })
-  if (data.access_token) {
-    localStorage?.setItem('authToken', data.access_token)
-    // Store refresh token as well
-    if (data.refresh_token) {
-      localStorage?.setItem('refreshToken', data.refresh_token);
-    }
-    // Store token expiry time
-    if (data.expires_in) {
-      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
-    }
-  }
-  return data
-}
-
-export async function register(email: string, password: string) {
-  // Use the signup function which generates username from email
-  return signup(email, password)
-}
-
-export async function logout() {
-  try {
-    // Call the backend logout endpoint to properly invalidate the session
-    await apiCall('/v1/auth/logout', { skipAuth: true });
-  } catch (error) {
-    // Even if the backend call fails, still clear the local token
-    console.warn('Logout API call failed:', error);
-  } finally {
-    // Always clear the local token regardless of backend response
-    localStorage?.removeItem('authToken');
-    localStorage?.removeItem('refreshToken');
-  }
-}
-
-// Token refresh function
-export async function refreshToken(currentRefreshToken: string) {
-  // The backend expects the refresh token in the request body
-  const response = await fetch(`${API_URL}/v1/auth/refresh`, {
-    method: 'POST',
-    headers: {
+  // Get headers with authentication
+  private getHeaders(): HeadersInit {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ refresh_token: currentRefreshToken }),
-  });
+    };
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => `API error: ${response.status}`);
-    throw new Error(`API error: ${response.status} - ${errorText}`);
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    return headers;
   }
 
-  const data = await response.json();
-  if (data.access_token) {
-    localStorage?.setItem('authToken', data.access_token);
-    // Update token expiry time
-    if (data.expires_in) {
-      localStorage?.setItem('tokenExpiry', String(Date.now() + (data.expires_in * 1000)));
+  // Generic request method
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options.headers,
+      },
+    };
+
+    const response = await fetch(url, config);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    // For endpoints that don't return JSON (like some DELETE operations)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    } else {
+      return {} as T;
     }
   }
-  return data;
-}
 
-// Task API functions
-export async function getTasks(filters?: TaskFilterOptions): Promise<TaskListResponse> {
-  const queryParams = new URLSearchParams()
-  if (filters) {
-    Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value))
-      }
-    })
-  }
-  const queryString = queryParams.toString()
-  const endpoint = `/v1/tasks${queryString ? `?${queryString}` : ''}`
-  return apiCall<TaskListResponse>(endpoint, { method: 'GET' })
-}
-
-export async function createTask(data: TaskCreateRequest): Promise<any> {
-  return apiCall<any>('/v1/tasks', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateTask(taskId: string, data: TaskUpdateRequest): Promise<any> {
-  return apiCall<any>(`/v1/tasks/${taskId}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function toggleTaskComplete(taskId: string, completed?: boolean): Promise<any> {
-  return apiCall<any>(`/v1/tasks/${taskId}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: completed ? 'done' : 'todo' }),
-  })
-}
-
-export async function deleteTask(taskId: string): Promise<any> {
-  return apiCall<any>(`/v1/tasks/${taskId}`, { method: 'DELETE' })
-}
-
-// Tag API functions
-export async function getTags(filters?: any): Promise<TagListResponse> {
-  const queryParams = new URLSearchParams()
-  if (filters) {
-    Object.entries(filters as Record<string, any>).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value))
-      }
-    })
-  }
-  const queryString = queryParams.toString()
-  const endpoint = `/v1/tags${queryString ? `?${queryString}` : ''}`
-  return apiCall<TagListResponse>(endpoint, { method: 'GET' })
-}
-
-export async function createTag(data: TagCreateRequest): Promise<any> {
-  return apiCall<any>('/v1/tags', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateTag(tagId: string, data: TagUpdateRequest): Promise<any> {
-  return apiCall<any>(`/v1/tags/${tagId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteTag(tagId: string): Promise<void> {
-  return apiCall<void>(`/v1/tags/${tagId}`, { method: 'DELETE' })
-}
-
-// Export API functions
-export async function exportTasks(format: 'json' | 'csv', params?: { include_completed?: boolean; start_date?: string; end_date?: string }): Promise<any> {
-  const url = new URL('/v1/export', `${API_URL}`);
-  url.searchParams.append('format', format);
-
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        url.searchParams.append(key, String(value));
-      }
+  // Authentication methods
+  async register(userData: { email: string; username: string; password: string; gdpr_consent: boolean }) {
+    return this.request<{access_token: string; token_type: string; user: any}>('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
     });
   }
 
-  return apiCall<any>(url.pathname + url.search, { method: 'GET' });
-}
+  async login(credentials: { username: string; password: string }) {
+    const formData = new FormData();
+    formData.append('username', credentials.username);
+    formData.append('password', credentials.password);
 
-// Analytics API functions
-export async function getDashboardAnalytics(period?: 'week' | 'month' | 'year' | 'all'): Promise<any> {
-  const url = new URL('/v1/analytics/dashboard', `${API_URL}`);
-  if (period) {
-    url.searchParams.append('period', period);
+    // For login, we need to send form data
+    const response = await fetch(`${this.baseUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
   }
 
-  return apiCall<any>(url.pathname + url.search, { method: 'GET' });
-}
+  async getProfile() {
+    return this.request<any>('/api/v1/users/me');
+  }
 
-export async function getStreakData(): Promise<any> {
-  return apiCall<any>('/v1/analytics/streak', { method: 'GET' });
-}
+  async updateProfile(profileData: any) {
+    return this.request<any>('/api/v1/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
 
-// User Preferences API functions
-export async function getUserPreferences(): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/v1/user/preferences', { method: 'GET' });
-}
-
-export async function updateUserPreferences(preferences: UserPreferencesUpdateRequest): Promise<UserPreferences> {
-  return apiCall<UserPreferences>('/v1/user/preferences', {
-    method: 'PATCH',
-    body: JSON.stringify(preferences)
-  });
-}
-
-// User Settings API functions
-export async function getUserSettings(): Promise<any> {
-  return apiCall<any>('/v1/user/settings', { method: 'GET' });
-}
-
-export async function updateUserSettings(data: any): Promise<any> {
-  return apiCall<any>('/v1/user/settings', {
-    method: 'PATCH',
-    body: JSON.stringify(data)
-  });
-}
-
-export async function checkHealth() {
-  try {
-    return await apiCall('/v1/health', { skipAuth: true })
-  } catch {
-    return { status: 'offline', database: 'disconnected' }
+  // Health check
+  async healthCheck() {
+    return this.request<{status: string; service: string}>('/api/v1/health');
   }
 }
 
-export async function getStoredUser() {
-  const token = getToken()
-  if (!token) return null
-  try {
-    // Decode JWT to get user info
-    const payload = token.split('.')[1]
-    const decoded = JSON.parse(atob(payload))
-    return decoded.sub || decoded.user_id || null
-  } catch {
-    return null
-  }
-}
-
-export { getToken }
-
-
-// ============================================================================
-// Tags API (T070)
-// ============================================================================
-
-export interface Tag {
-  id: string
-  user_id: string
-  name: string
-  color: string
-  created_at: string
-}
-
-export interface TagCreateData {
-  name: string
-  color?: string
-}
-
-export interface TagUpdateData {
-  name?: string
-  color?: string
-}
-
-// Subtask API functions
-export async function createSubtask(taskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/v1/tasks/${taskId}/subtasks`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function updateSubtask(subtaskId: string, data: any): Promise<any> {
-  return apiCall<any>(`/v1/subtasks/${subtaskId}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  })
-}
-
-export async function deleteSubtask(subtaskId: string): Promise<any> {
-  return apiCall<any>(`/v1/subtasks/${subtaskId}`, { method: 'DELETE' })
-}
-
-// Streak API function
-export async function getStreak() {
-  return apiCall('/v1/analytics/streak', { method: 'GET' })
-}
-
-
-
+export const apiService = new ApiService();

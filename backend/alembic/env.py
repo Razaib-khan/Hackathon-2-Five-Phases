@@ -1,54 +1,24 @@
 from logging.config import fileConfig
-import os
-from dotenv import load_dotenv
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
 
-# Load environment variables
-load_dotenv()
+# Import all models for autogenerate support
+from src.models.base import Base
+from src.models.user import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
-# Override sqlalchemy.url with DATABASE_URL from environment
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-# Import all models to ensure they're registered with SQLModel
-# This will be updated when models are created
-try:
-    from src.models.user import User
-    from src.models.task import Task
-    from src.models.tag import Tag
-    from src.models.subtask import Subtask
-    from src.models.user_settings import UserSettings
-    from src.models.role import Role
-    from src.models.permission import Permission
-    from src.models.project import Project
-    from src.models.user_project import UserProject
-    from src.models.user_settings import UserSettings
-except ImportError:
-    # Models not yet created, skip for now
-    pass
-
 # add your model's MetaData object here
 # for 'autogenerate' support
-from sqlmodel import SQLModel
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -88,7 +58,7 @@ def run_migrations_online() -> None:
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

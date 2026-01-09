@@ -1,358 +1,279 @@
-/**
- * Dashboard Page
- *
- * Main task management interface with:
- * - Task view switcher (list/kanban/calendar/matrix)
- * - Filter panel
- * - Create task button
- * - Analytics widgets (stats, streak)
- * - Tag manager sidebar
- *
- * Integrates all core components and contexts.
- */
+'use client';
 
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { useView } from '@/contexts/ViewContext'
-import { useTheme } from '@/contexts/ThemeContext'
-import { useAnalytics } from '@/lib/hooks/useAnalytics'
-import { getStoredUser } from '@/lib/api'
-import { ListView } from '@/components/views/ListView'
-import { KanbanView } from '@/components/views/KanbanView'
-import { CalendarView } from '@/components/views/CalendarView'
-import { MatrixView } from '@/components/views/MatrixView'
-import { TagManager } from '@/components/TagManager'
-import { TaskDetailsDialog } from '@/components/TaskDetailsDialog'
-import { FilterPanel } from '@/components/FilterPanel'
-import { ExportDialog } from '@/components/ExportDialog'
-import { KeyboardShortcutsPanel } from '@/components/KeyboardShortcutsPanel'
-import { OfflineQueueStatus } from '@/components/OfflineQueueStatus'
-import TaskCreationDialog from '@/components/TaskCreationDialog'
-import WebsiteLogo from '@/components/WebsiteLogo'
-import {
-  LayoutList,
-  LayoutGrid,
-  Calendar,
-  Grid3x3,
-  Plus,
-  Moon,
-  Sun,
-  Settings,
-  BarChart3,
-  Filter,
-  Download,
-  Keyboard,
-} from 'lucide-react'
-
-const VIEW_ICONS = {
-  list: LayoutList,
-  kanban: LayoutGrid,
-  calendar: Calendar,
-  matrix: Grid3x3,
-}
+import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import NotificationList from '../../components/notifications/NotificationList';
+import TaskList from '../../components/tasks/TaskList';
+import TaskForm from '../../components/tasks/TaskForm';
+import { Task } from '../../lib/types';
 
 export default function DashboardPage() {
-  return (
-    <ErrorBoundary>
-      <DashboardContent />
-    </ErrorBoundary>
-  )
-}
+  const { user, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
-function DashboardContent() {
-  const router = useRouter()
-  const { viewMode, setViewMode } = useView()
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const { dashboard, fetchDashboard, isLoadingDashboard } = useAnalytics()
-
-  const [userId, setUserId] = useState<string | null>(null)
-  const [showTagManager, setShowTagManager] = useState(false)
-  const [showFilterPanel, setShowFilterPanel] = useState(false)
-  const [showCreateTask, setShowCreateTask] = useState(false)
-  const [showExportDialog, setShowExportDialog] = useState(false)
-  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const user = await getStoredUser()
-      setUserId(user)
-    }
-    loadUser()
-  }, [])
-
-  useEffect(() => {
-    fetchDashboard('all')
-  }, [fetchDashboard])
-
-  // Global keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in input/textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      switch (e.key) {
-        case '?':
-          e.preventDefault()
-          setShowKeyboardShortcuts(true)
-          break
-        case 'n':
-        case 'N':
-          e.preventDefault()
-          setShowCreateTask(true)
-          break
-        case '/':
-          e.preventDefault()
-          setShowFilterPanel(true)
-          break
-        case '1':
-          e.preventDefault()
-          setViewMode('list')
-          break
-        case '2':
-          e.preventDefault()
-          setViewMode('kanban')
-          break
-        case '3':
-          e.preventDefault()
-          setViewMode('calendar')
-          break
-        case '4':
-          e.preventDefault()
-          setViewMode('matrix')
-          break
-        case 'a':
-        case 'A':
-          e.preventDefault()
-          router.push('/dashboard/analytics')
-          break
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [router, setViewMode])
-
-  if (!userId) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500">Loading...</p>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <p>Loading dashboard...</p>
       </div>
-    )
+    );
   }
 
+  if (!user) {
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h2>
+        <p className="text-gray-600">Please sign in to access the dashboard.</p>
+      </div>
+    );
+  }
+
+  const handleTaskCreated = (task: Task) => {
+    // Refresh the task list if needed
+    setShowCreateTaskModal(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <WebsiteLogo size="navbar" />
-            </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600">Welcome to your AIDO dashboard, {user.username}</p>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                {resolvedTheme === 'dark' ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </button>
-
-              {/* Filter Panel Toggle */}
-              <button
-                onClick={() => setShowFilterPanel(!showFilterPanel)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <Filter className="h-5 w-5" />
-              </button>
-
-              {/* Tag Manager Toggle */}
-              <button
-                onClick={() => setShowTagManager(!showTagManager)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <Settings className="h-5 w-5" />
-              </button>
-
-              {/* Analytics */}
-              <button
-                onClick={() => router.push('/dashboard/analytics')}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                title="View Analytics"
-              >
-                <BarChart3 className="h-5 w-5" />
-              </button>
-
-              {/* Export */}
-              <button
-                onClick={() => setShowExportDialog(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                title="Export Tasks"
-              >
-                <Download className="h-5 w-5" />
-              </button>
-
-              {/* Keyboard Shortcuts */}
-              <button
-                onClick={() => setShowKeyboardShortcuts(true)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                title="Keyboard Shortcuts (?)"
-              >
-                <Keyboard className="h-5 w-5" />
-              </button>
-
-              {/* Create Task */}
-              <button
-                onClick={() => setShowCreateTask(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="h-5 w-5" />
-                New Task
-              </button>
-            </div>
-          </div>
-
-          {/* View Switcher */}
-          <div className="flex items-center gap-2 pb-4">
-            {(Object.keys(VIEW_ICONS) as Array<keyof typeof VIEW_ICONS>).map((view) => {
-              const Icon = VIEW_ICONS[view]
-              const isActive = viewMode === view
-
-              return (
-                <button
-                  key={view}
-                  onClick={() => setViewMode(view)}
-                  className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="capitalize">{view}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Main View */}
-          <div className="flex-1">
-            {/* Stats Cards */}
-            {dashboard && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Tasks</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {dashboard.total_tasks}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {dashboard.completed_tasks}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Due Today</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {dashboard.due_today}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Overdue</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {dashboard.overdue_tasks}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Filter Panel */}
-            {showFilterPanel && (
-              <div className="mb-6">
-                <FilterPanel isOpen={showFilterPanel} onClose={() => setShowFilterPanel(false)} />
-              </div>
-            )}
-
-            {/* Task View */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              {viewMode === 'list' && <ListView userId={userId} onTaskClick={setSelectedTaskId} />}
-              {viewMode === 'kanban' && <KanbanView userId={userId} onTaskClick={setSelectedTaskId} />}
-              {viewMode === 'calendar' && <CalendarView userId={userId} onTaskClick={setSelectedTaskId} />}
-              {viewMode === 'matrix' && <MatrixView userId={userId} onTaskClick={setSelectedTaskId} />}
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          {showTagManager && (
-            <div className="w-80 flex-shrink-0">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 sticky top-24">
-                <TagManager />
-              </div>
-            </div>
-          )}
+        <div className="mt-4 border-b border-gray-200 overflow-x-auto">
+          <nav className="-mb-px flex space-x-8 min-w-max sm:space-x-0 sm:min-w-0">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'tasks'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              My Tasks
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'analytics'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Analytics
+            </button>
+          </nav>
         </div>
       </div>
 
-      {/* Task Details Dialog */}
-      {selectedTaskId && userId && (
-        <TaskDetailsDialog
-          taskId={selectedTaskId}
-          userId={userId}
-          onClose={() => setSelectedTaskId(null)}
-        />
+      {showCreateTaskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Create New Task</h2>
+                <button
+                  onClick={() => setShowCreateTaskModal(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <TaskForm
+                onSuccess={handleTaskCreated}
+                onCancel={() => setShowCreateTaskModal(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Export Dialog */}
-      {userId && (
-        <ExportDialog
-          isOpen={showExportDialog}
-          onClose={() => setShowExportDialog(false)}
-          userId={userId}
-        />
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Quick Actions</h2>
+                <button
+                  onClick={() => setShowCreateTaskModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm"
+                >
+                  Create Task
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md">
+                  Create Task
+                </button>
+                <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md">
+                  View All Tasks
+                </button>
+                <button className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-md">
+                  Filter by Priority
+                </button>
+                <button className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 px-4 rounded-md">
+                  Completed Tasks
+                </button>
+                <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-md">
+                  Notifications
+                </button>
+                <button className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-4 rounded-md">
+                  Profile
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Recent Tasks</h2>
+                <button
+                  onClick={() => setActiveTab('tasks')}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  View All
+                </button>
+              </div>
+
+              <TaskList />
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Notifications</h2>
+                <NotificationList />
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                  <p className="text-sm font-medium text-blue-800">New phase started</p>
+                  <p className="text-xs text-blue-600">Development phase has begun for Global Innovation Challenge</p>
+                </div>
+
+                <div className="p-3 bg-green-50 rounded border border-green-100">
+                  <p className="text-sm font-medium text-green-800">Team invite received</p>
+                  <p className="text-xs text-green-600">You've been invited to join 'Innovators United'</p>
+                </div>
+
+                <div className="p-3 bg-yellow-50 rounded border border-yellow-100">
+                  <p className="text-sm font-medium text-yellow-800">Deadline approaching</p>
+                  <p className="text-xs text-yellow-600">Submission deadline in 3 days</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800">My Profile</h2>
+
+              <div className="flex items-center mb-4">
+                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
+                <div className="ml-4">
+                  <h3 className="font-medium text-gray-900">{user.first_name} {user.last_name}</h3>
+                  <p className="text-sm text-gray-600">@{user.username}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Email:</span>
+                  <p className="text-gray-600">{user.email}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Role:</span>
+                  <p className="text-gray-600 capitalize">{user.role}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Joined:</span>
+                  <p className="text-gray-600">{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</p>
+                </div>
+              </div>
+
+              <button className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                Edit Profile
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Create Task Dialog */}
-      {userId && (
-        <TaskCreationDialog
-          isOpen={showCreateTask}
-          onClose={() => setShowCreateTask(false)}
-          onTaskCreated={() => {
-            // Refresh the dashboard after task creation
-            fetchDashboard('all');
-          }}
-          userId={userId}
-        />
+      {activeTab === 'tasks' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">My Tasks</h2>
+              <button
+                onClick={() => setShowCreateTaskModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm"
+              >
+                Create Task
+              </button>
+            </div>
+
+            <TaskList />
+          </div>
+        </div>
       )}
 
-      {/* Keyboard Shortcuts Panel */}
-      <KeyboardShortcutsPanel
-        isOpen={showKeyboardShortcuts}
-        onClose={() => setShowKeyboardShortcuts(false)}
-      />
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Task Analytics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-2xl font-bold text-blue-600">12</h3>
+                <p className="text-gray-600">Total Tasks</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-2xl font-bold text-green-600">8</h3>
+                <p className="text-gray-600">Completed</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="text-2xl font-bold text-red-600">4</h3>
+                <p className="text-gray-600">Pending</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Offline Queue Status */}
-      <OfflineQueueStatus />
+          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Priority Distribution</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="border border-gray-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-red-600">3</div>
+                <p className="text-sm text-gray-600">Critical</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-orange-500">4</div>
+                <p className="text-sm text-gray-600">High</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-yellow-500">3</div>
+                <p className="text-sm text-gray-600">Medium</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-500">2</div>
+                <p className="text-sm text-gray-600">Low</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }

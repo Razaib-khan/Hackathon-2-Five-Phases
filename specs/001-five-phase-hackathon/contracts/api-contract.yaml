@@ -1,0 +1,541 @@
+# API Contract: Five Phase Hackathon Platform
+
+## Authentication API
+
+### POST /api/v1/auth/register
+Register a new user for the platform
+
+**Request Body:**
+```json
+{
+  "email": "string (required, valid email)",
+  "username": "string (3-30 chars, alphanumeric+_, required)",
+  "password": "string (min 8 chars, required)",
+  "first_name": "string (optional)",
+  "last_name": "string (optional)",
+  "gdpr_consent": "boolean (required, must be true)"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "UUID",
+  "email": "string",
+  "username": "string",
+  "first_name": "string",
+  "last_name": "string",
+  "role": "string (participant|judge|admin)",
+  "created_at": "ISO datetime",
+  "access_token": "string (JWT)",
+  "token_type": "string (bearer)"
+}
+```
+
+### POST /api/v1/auth/login
+Authenticate user and return access token
+
+**Request Body:**
+```json
+{
+  "username_or_email": "string (required)",
+  "password": "string (required)"
+}
+```
+
+**Response (200):**
+```json
+{
+  "access_token": "string (JWT)",
+  "token_type": "string (bearer)",
+  "user": {
+    "id": "UUID",
+    "email": "string",
+    "username": "string",
+    "role": "string"
+  }
+}
+```
+
+### POST /api/v1/auth/oauth/google
+Authenticate via Google OAuth
+
+**Request Body:**
+```json
+{
+  "code": "string (OAuth code from Google, required)",
+  "redirect_uri": "string (required)"
+}
+```
+
+**Response (200):**
+```json
+{
+  "access_token": "string (JWT)",
+  "token_type": "string (bearer)",
+  "user": {
+    "id": "UUID",
+    "email": "string",
+    "username": "string",
+    "role": "string"
+  }
+}
+```
+
+## User Management API
+
+### GET /api/v1/users/me
+Get current user's profile
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "email": "string",
+  "username": "string",
+  "first_name": "string",
+  "last_name": "string",
+  "role": "string",
+  "profile_image_url": "string",
+  "bio": "string",
+  "skills": "array of strings",
+  "created_at": "ISO datetime",
+  "last_login": "ISO datetime"
+}
+```
+
+### PUT /api/v1/users/me
+Update current user's profile
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Request Body:**
+```json
+{
+  "first_name": "string (optional)",
+  "last_name": "string (optional)",
+  "profile_image_url": "string (optional)",
+  "bio": "string (optional)",
+  "skills": "array of strings (optional)"
+}
+```
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "email": "string",
+  "username": "string",
+  "first_name": "string",
+  "last_name": "string",
+  "role": "string",
+  "profile_image_url": "string",
+  "bio": "string",
+  "skills": "array of strings",
+  "updated_at": "ISO datetime"
+}
+```
+
+## Team Management API
+
+### GET /api/v1/teams
+List teams for current user or search teams
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Query Parameters:**
+- hackathon_id: UUID (optional, filter by hackathon)
+- role: string (optional, filter by role in team: member, admin)
+- search: string (optional, search by team name)
+
+**Response (200):**
+```json
+{
+  "teams": [
+    {
+      "id": "UUID",
+      "name": "string",
+      "description": "string",
+      "hackathon_id": "UUID",
+      "owner_id": "UUID",
+      "max_members": "integer",
+      "current_members": "integer",
+      "status": "string (active|inactive|archived)",
+      "created_at": "ISO datetime",
+      "updated_at": "ISO datetime",
+      "my_role": "string (member|admin|owner)"
+    }
+  ],
+  "total": "integer"
+}
+```
+
+### POST /api/v1/teams
+Create a new team
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Request Body:**
+```json
+{
+  "name": "string (3-50 chars, required)",
+  "description": "string (optional)",
+  "hackathon_id": "UUID (required)",
+  "max_members": "integer (optional, default: 5)"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "UUID",
+  "name": "string",
+  "description": "string",
+  "hackathon_id": "UUID",
+  "owner_id": "UUID",
+  "max_members": "integer",
+  "status": "string",
+  "created_at": "ISO datetime",
+  "updated_at": "ISO datetime"
+}
+```
+
+### POST /api/v1/teams/{team_id}/invite
+Invite a user to join the team
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Path Parameters:**
+- team_id: UUID
+
+**Request Body:**
+```json
+{
+  "email": "string (required, valid email of invitee)"
+}
+```
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "team_id": "UUID",
+  "user_id": "UUID",
+  "role": "string",
+  "status": "string (invited)",
+  "joined_at": "ISO datetime"
+}
+```
+
+### POST /api/v1/teams/{team_id}/join
+Join a team via invite code
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Path Parameters:**
+- team_id: UUID
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "team_id": "UUID",
+  "user_id": "UUID",
+  "role": "string",
+  "status": "string (active)",
+  "joined_at": "ISO datetime"
+}
+```
+
+## Hackathon and Phase API
+
+### GET /api/v1/hackathons
+List available hackathons
+
+**Headers:**
+- Authorization: Bearer {token} (optional)
+
+**Query Parameters:**
+- status: string (optional, filter by status)
+- search: string (optional, search by name)
+
+**Response (200):**
+```json
+{
+  "hackathons": [
+    {
+      "id": "UUID",
+      "name": "string",
+      "description": "string",
+      "start_date": "ISO datetime",
+      "end_date": "ISO datetime",
+      "registration_start": "ISO datetime",
+      "registration_end": "ISO datetime",
+      "status": "string",
+      "max_teams": "integer",
+      "max_participants": "integer",
+      "created_at": "ISO datetime",
+      "updated_at": "ISO datetime",
+      "is_active": "boolean"
+    }
+  ],
+  "total": "integer"
+}
+```
+
+### GET /api/v1/hackathons/{hackathon_id}/phases
+Get all phases for a hackathon
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Path Parameters:**
+- hackathon_id: UUID
+
+**Response (200):**
+```json
+{
+  "phases": [
+    {
+      "id": "UUID",
+      "name": "string",
+      "display_name": "string",
+      "start_time": "ISO datetime",
+      "end_time": "ISO datetime",
+      "order": "integer",
+      "is_active": "boolean",
+      "is_current": "boolean"
+    }
+  ]
+}
+```
+
+### GET /api/v1/phases/current
+Get the currently active phase for all hackathons
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200):**
+```json
+{
+  "current_phases": [
+    {
+      "id": "UUID",
+      "name": "string",
+      "display_name": "string",
+      "hackathon_id": "UUID",
+      "hackathon_name": "string",
+      "start_time": "ISO datetime",
+      "end_time": "ISO datetime",
+      "time_remaining": "string (formatted duration)",
+      "is_active": "boolean"
+    }
+  ]
+}
+```
+
+## Submission API
+
+### POST /api/v1/submissions
+Submit a project for a hackathon
+
+**Headers:**
+- Authorization: Bearer {token}
+- Content-Type: multipart/form-data (for file uploads)
+
+**Request Body:**
+```json
+{
+  "team_id": "UUID (required)",
+  "hackathon_id": "UUID (required)",
+  "title": "string (5-100 chars, required)",
+  "description": "string (10-5000 chars, required)",
+  "repository_url": "string (optional, valid URL)",
+  "demo_url": "string (optional, valid URL)",
+  "video_url": "string (optional, valid URL)"
+}
+```
+
+**Additional files:** Multiple files can be uploaded as multipart form data
+
+**Response (201):**
+```json
+{
+  "id": "UUID",
+  "team_id": "UUID",
+  "hackathon_id": "UUID",
+  "title": "string",
+  "description": "string",
+  "repository_url": "string",
+  "demo_url": "string",
+  "video_url": "string",
+  "submitted_at": "ISO datetime",
+  "updated_at": "ISO datetime",
+  "status": "string (submitted)",
+  "submitted_by": "UUID",
+  "files": [
+    {
+      "id": "UUID",
+      "filename": "string",
+      "file_size": "integer",
+      "mime_type": "string",
+      "uploaded_at": "ISO datetime"
+    }
+  ]
+}
+```
+
+### GET /api/v1/submissions/{submission_id}
+Get submission details
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Path Parameters:**
+- submission_id: UUID
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "team_id": "UUID",
+  "hackathon_id": "UUID",
+  "title": "string",
+  "description": "string",
+  "repository_url": "string",
+  "demo_url": "string",
+  "video_url": "string",
+  "submitted_at": "ISO datetime",
+  "updated_at": "ISO datetime",
+  "status": "string",
+  "submitted_by": "UUID",
+  "team": {
+    "id": "UUID",
+    "name": "string"
+  },
+  "files": [
+    {
+      "id": "UUID",
+      "filename": "string",
+      "file_path": "string",
+      "file_size": "integer",
+      "mime_type": "string",
+      "uploaded_at": "ISO datetime"
+    }
+  ]
+}
+```
+
+## Admin API
+
+### GET /api/v1/admin/dashboard
+Admin dashboard overview
+
+**Headers:**
+- Authorization: Bearer {token} (admin role required)
+
+**Response (200):**
+```json
+{
+  "total_users": "integer",
+  "total_teams": "integer",
+  "total_submissions": "integer",
+  "active_hackathons": "integer",
+  "pending_evaluations": "integer",
+  "recent_activity": [
+    {
+      "id": "UUID",
+      "action": "string",
+      "user_email": "string",
+      "entity_type": "string",
+      "entity_id": "string",
+      "timestamp": "ISO datetime"
+    }
+  ]
+}
+```
+
+### GET /api/v1/admin/users
+List all users (admin)
+
+**Headers:**
+- Authorization: Bearer {token} (admin role required)
+
+**Query Parameters:**
+- role: string (optional, filter by role)
+- search: string (optional, search by email/username)
+
+**Response (200):**
+```json
+{
+  "users": [
+    {
+      "id": "UUID",
+      "email": "string",
+      "username": "string",
+      "role": "string",
+      "is_active": "boolean",
+      "created_at": "ISO datetime",
+      "last_login": "ISO datetime"
+    }
+  ],
+  "total": "integer"
+}
+```
+
+## Notification API
+
+### GET /api/v1/notifications
+Get user's notifications
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Query Parameters:**
+- unread_only: boolean (optional, default: false)
+- limit: integer (optional, default: 20)
+
+**Response (200):**
+```json
+{
+  "notifications": [
+    {
+      "id": "UUID",
+      "title": "string",
+      "message": "string",
+      "type": "string",
+      "is_read": "boolean",
+      "sent_at": "ISO datetime",
+      "read_at": "ISO datetime"
+    }
+  ],
+  "total": "integer"
+}
+```
+
+### POST /api/v1/notifications/{notification_id}/read
+Mark notification as read
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Path Parameters:**
+- notification_id: UUID
+
+**Response (200):**
+```json
+{
+  "id": "UUID",
+  "is_read": "boolean (true)",
+  "read_at": "ISO datetime"
+}
+```

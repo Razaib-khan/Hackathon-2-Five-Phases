@@ -1,159 +1,70 @@
-"""
-AIDO Backend - FastAPI Application Entry Point
-
-Phase 2: Web API with JWT Authentication
-- FastAPI 0.104+ with stateless JWT verification
-- SQLModel ORM for User/Task persistence
-- Neon PostgreSQL database
-"""
-
-import os
-import re
-from contextlib import asynccontextmanager
-
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import SQLModel
 
-from .config.database import engine
-from .config.settings import settings
+from src.api import auth_router, user_router
+from src.api.task_router import router as task_router
+from src.api.priority_router import router as priority_router
+from src.api.filter_router import router as filter_router
+from src.api.phase_router import router as phase_router
+from src.api.notification_router import router as notification_router
+from src.api.team_router import router as team_router
+from src.api.submission_router import router as submission_router
+from src.api.evaluation_router import router as evaluation_router
+from src.api.gdpr_router import router as gdpr_router
+from src.api.backup_router import router as backup_router
+from src.api.optimization_router import router as optimization_router
+from src.api.cache_router import router as cache_router
+from src.api.admin_router import router as admin_router
+from src.middleware.security import security_middleware_handler
+from src.config.settings import settings
+from src.config.logging import setup_logging
 
-# Load environment variables
-try:
-    load_dotenv()
-except Exception as e:
-    print(f"Warning: Could not load .env file: {e}")
+# Set up logging
+setup_logging(log_level="INFO")
 
-# Log startup configuration (safely)
-try:
-    print("🚀 AIDO Backend Starting...")
-    db_url = os.getenv('DATABASE_URL', 'NOT SET')
-    if db_url and db_url != 'NOT SET':
-        print(f"  DATABASE_URL: {db_url[:50]}...")
-    else:
-        print(f"  DATABASE_URL: NOT SET")
-    print(f"  JWT_SECRET: {'SET' if os.getenv('JWT_SECRET') else 'NOT SET'}")
-    print(f"  FRONTEND_URL: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}")
-except Exception as e:
-    print(f"Warning: Error logging configuration: {e}")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager - creates database tables on startup."""
-    try:
-        # Create database tables
-        SQLModel.metadata.create_all(bind=engine)
-        print("✅ Database initialized successfully")
-    except Exception as e:
-        print(f"⚠️  Database initialization warning: {str(e)}")
-        print(f"Database URL: {os.getenv('DATABASE_URL', 'NOT SET')[:50]}...")
-        # Don't crash - let the app start so we can debug
-        print("⚠️  Continuing startup anyway (database may be unavailable)")
-    yield
-    # Cleanup (if needed)
-
-
-# Initialize FastAPI application
 app = FastAPI(
-    title=settings.project_name,
-    description="AIDO API - Complete Web API layer for task management",
-    version=settings.version,
-    lifespan=lifespan,
+    title="Five Phase Hackathon Platform API",
+    description="API for managing hackathon lifecycle: Registration, Ideation, Development, Submission, and Presentation/Judging",
+    version="1.0.0",
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
 )
 
-# Configure CORS for frontend access
+# Add security middleware first (this will be the outermost layer)
+app.middleware("http")(security_middleware_handler)
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # expose_headers=["Access-Control-Allow-Origin"]
 )
 
-# Rate limiting middleware (if Redis is configured)
-try:
-    from .middleware.rate_limit import RateLimitMiddleware
+# Include routers
+app.include_router(auth_router.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(user_router.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(task_router, prefix="/api/v1", tags=["tasks"])
+app.include_router(priority_router, prefix="/api/v1", tags=["priority"])
+app.include_router(filter_router, prefix="/api/v1", tags=["filters"])
+app.include_router(phase_router, prefix="/api/v1", tags=["hackathons", "phases"])
+app.include_router(notification_router, prefix="/api/v1", tags=["notifications"])
+app.include_router(team_router, prefix="/api/v1", tags=["teams"])
+app.include_router(submission_router, prefix="/api/v1", tags=["submissions"])
+app.include_router(evaluation_router, prefix="/api/v1", tags=["evaluations"])
+app.include_router(gdpr_router, prefix="/api/v1", tags=["gdpr", "privacy"])
+app.include_router(backup_router, prefix="/api/v1", tags=["backup", "retention"])
+app.include_router(optimization_router, prefix="/api/v1", tags=["optimization", "performance"])
+app.include_router(cache_router, prefix="/api/v1", tags=["cache", "performance"])
+app.include_router(admin_router, prefix="/api/v1", tags=["admin"])
 
-    app.middleware("http")(RateLimitMiddleware(app))
-    print("✓ Rate limiting middleware enabled")
-except Exception as e:
-    print(f"Warning: Rate limiting disabled: {e}")
-
-
-# Health check endpoint
-@app.get("/health", tags=["Health"])
+@app.get("/api/v1/health")
 async def health_check():
-    """
-    Health check endpoint for monitoring.
+    return {"status": "healthy", "service": "hackathon-platform-api"}
 
-    Verifies:
-    - Application is running
-    - Database connection (if available)
-
-    Returns:
-        dict: Health status
-    """
-    from sqlalchemy import text
-
-    db_status = "unknown"
-    try:
-        # Test database connectivity with simple query
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)[:50]}"
-
-    return {
-        "status": "healthy",
-        "database": db_status,
-        "version": "2.0.0",
-    }
-
-
-# Import and include routers
-from .api.auth_router import router as auth_router
-from .api.user_router import router as user_router
-from .api.project_router import router as project_router
-from .api.task_router import router as task_router
-from .api.dashboard_router import router as dashboard_router
-from .routers.analytics import router as analytics_router
-
-# Import error handlers
-from .middleware.error_handler import add_error_handlers
-
-# Add error handlers to the app
-app = add_error_handlers(app)
-
-# Include API routes with version prefix (for formal API access)
-# Removed legacy auth router to prevent route conflicts and ensure consistent auth behavior
-app.include_router(auth_router, prefix=settings.api_v1_str, tags=["Authentication"])
-app.include_router(user_router, prefix=settings.api_v1_str, tags=["Users"])
-app.include_router(project_router, prefix=settings.api_v1_str, tags=["Projects"])
-app.include_router(task_router, prefix=settings.api_v1_str, tags=["Tasks"])
-app.include_router(dashboard_router, prefix=settings.api_v1_str, tags=["Dashboard"])
-app.include_router(analytics_router, prefix=settings.api_v1_str, tags=["Analytics"])
-
-# Include API routes without version prefix (for Hugging Face Space direct access)
-# Only include the main auth router to avoid route conflicts
-app.include_router(auth_router, tags=["Authentication (Direct)"])
-app.include_router(user_router, tags=["Users (Direct)"])
-app.include_router(project_router, tags=["Projects (Direct)"])
-app.include_router(task_router, tags=["Tasks (Direct)"])
-app.include_router(dashboard_router, tags=["Dashboard (Direct)"])
-app.include_router(analytics_router, tags=["Analytics (Direct)"])
-
-
-# Development entry point
-if __name__ == "__main__":
-    import uvicorn
-
-    port = int(os.getenv("API_PORT", "8000"))
-    uvicorn.run(
-        "backend.src.main:app",
-        host=os.getenv("API_HOST", "0.0.0.0"),
-        port=port,
-        reload=True,
-    )
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Five Phase Hackathon Platform API"}

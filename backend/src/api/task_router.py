@@ -1,236 +1,117 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
-from typing import List
-from ..config.database import get_session
-from ..models.user import User
-from ..models.task import Task
-from ..models.schemas.task import TaskCreate, TaskUpdate, TaskResponse, StatusEnum
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from .. import schemas
+from ..config.database import get_db
 from ..services.task_service import TaskService
-from ..utils.auth import get_current_user_from_token
-from ..utils.task_validation import validate_task_creation_data, validate_task_update_data
+from ..services.auth_service import get_current_user
+from datetime import datetime
 
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/tasks",
+    tags=["tasks"]
+)
 
 
-@router.post("/tasks/", response_model=TaskResponse, summary="Create a new task")
-async def create_task(
-    task_data: TaskCreate,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> TaskResponse:
+@router.post("/", response_model=schemas.TaskResponse)
+def create_task(
+    task: schemas.TaskCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """
-    Create a new task. According to requirements, only title and priority are required.
-
-    Args:
-        task_data: Task creation data (only title and priority required)
-        current_user: Authenticated user (creator)
-        session: Database session
-
-    Returns:
-        TaskResponse object with the created task's information
+    Create a new task
     """
-    # Validate task creation data
-    is_valid, error_msg = validate_task_creation_data(task_data)
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_msg
-        )
-
-    # Check if user has permission to create tasks
-    has_permission = TaskService.check_task_creation_permissions(session, current_user.id)
-    if not has_permission:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create tasks"
-        )
-
-    task = TaskService.create_task(session, task_data, current_user.id)
-    return TaskResponse.model_validate(task)
-
-
-@router.get("/tasks/", response_model=List[TaskResponse], summary="List user's tasks")
-async def list_tasks(
-    skip: int = 0,
-    limit: int = 100,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> List[TaskResponse]:
-    """
-    List tasks created by or assigned to the current user with pagination.
-
-    Args:
-        skip: Number of tasks to skip
-        limit: Maximum number of tasks to return
-        current_user: Authenticated user
-        session: Database session
-
-    Returns:
-        List of TaskResponse objects
-    """
-    # Get tasks created by the user
-    created_tasks = TaskService.get_tasks_by_user(session, current_user.id, skip=skip, limit=limit//2)
-
-    # Get tasks assigned to the user
-    assigned_tasks = TaskService.get_tasks_assigned_to_user(session, current_user.id, skip=skip, limit=limit//2)
-
-    # Combine both lists, removing duplicates
-    all_tasks = list(set(created_tasks + assigned_tasks))
-
-    return [TaskResponse.model_validate(task) for task in all_tasks]
-
-
-@router.get("/tasks/{task_id}", response_model=TaskResponse, summary="Get specific task")
-async def get_task(
-    task_id: str,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> TaskResponse:
-    """
-    Get information about a specific task.
-
-    Args:
-        task_id: ID of the task to retrieve
-        current_user: Authenticated user
-        session: Database session
-
-    Returns:
-        TaskResponse object with the task's information
-    """
-    from uuid import UUID
     try:
-        task_uuid = UUID(task_id)
-    except ValueError:
+        db_task = TaskService.create_task(db, task, str(current_user.id))
+        return db_task
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid task ID format"
+            detail=f"Error creating task: {str(e)}"
         )
 
-    task = TaskService.get_task_by_id(session, task_uuid)
-    if not task:
+
+@router.get("/{task_id}", response_model=schemas.TaskResponse)
+def get_task(
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Get a specific task by ID
+    """
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
 
-    # Check if the user has access to the task
-    has_access = TaskService.check_task_access(session, task_uuid, current_user.id)
-    if not has_access:
+    # Check if user has permission to view the task (creator or assigned)
+    if db_task.created_by != str(current_user.id) and db_task.assigned_to != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this task"
+            detail="Not authorized to view this task"
         )
 
-    return TaskResponse.model_validate(task)
+    return db_task
 
 
-@router.put("/tasks/{task_id}", response_model=TaskResponse, summary="Update a task")
-async def update_task(
+@router.put("/{task_id}", response_model=schemas.TaskResponse)
+def update_task(
     task_id: str,
-    task_update: TaskUpdate,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> TaskResponse:
+    task_update: schemas.TaskUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """
-    Update a task.
-
-    Args:
-        task_id: ID of the task to update
-        task_update: Task update data
-        current_user: Authenticated user
-        session: Database session
-
-    Returns:
-        TaskResponse object with the updated task's information
+    Update a specific task
     """
-    from uuid import UUID
-    try:
-        task_uuid = UUID(task_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid task ID format"
-        )
-
-    # Validate task update data
-    is_valid, error_msg = validate_task_update_data(task_update)
-    if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_msg
-        )
-
-    # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_uuid)
-    if not task:
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
 
-    # Check if the user has permission to update the task
-    has_permission = TaskService.check_task_access(session, task_uuid, current_user.id)
-    if not has_permission:
+    # Check if user has permission to update the task (creator or assigned)
+    if db_task.created_by != str(current_user.id) and db_task.assigned_to != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this task"
         )
 
-    updated_task = TaskService.update_task(session, task_uuid, task_update)
-    if not updated_task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    return TaskResponse.model_validate(updated_task)
+    updated_task = TaskService.update_task(db, task_id, task_update)
+    return updated_task
 
 
-@router.delete("/tasks/{task_id}", summary="Delete a task")
-async def delete_task(
+@router.delete("/{task_id}")
+def delete_task(
     task_id: str,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> dict:
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """
-    Delete a task.
-
-    Args:
-        task_id: ID of the task to delete
-        current_user: Authenticated user
-        session: Database session
-
-    Returns:
-        Success message
+    Delete a specific task
     """
-    from uuid import UUID
-    try:
-        task_uuid = UUID(task_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid task ID format"
-        )
-
-    # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_uuid)
-    if not task:
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
 
-    # Check if the user has permission to delete the task
-    # Only the creator can delete a task
-    if task.created_by != current_user.id:
+    # Only the creator can delete the task
+    if db_task.created_by != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this task"
         )
 
-    deleted = TaskService.delete_task(session, task_uuid)
-    if not deleted:
+    success = TaskService.delete_task(db, task_id)
+    if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
@@ -239,55 +120,141 @@ async def delete_task(
     return {"message": "Task deleted successfully"}
 
 
-@router.patch("/tasks/{task_id}/status", response_model=TaskResponse, summary="Update task status")
-async def update_task_status(
+@router.get("/", response_model=List[schemas.TaskResponse])
+def get_tasks(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    priority: Optional[schemas.TaskPriority] = None,
+    status: Optional[schemas.TaskStatus] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Get tasks for the current user (created or assigned) with optimized filtering
+    """
+    # Use the optimized filtering method from TaskService
+    tasks = TaskService.get_filtered_tasks(
+        db, str(current_user.id), priority, status, search, skip, limit
+    )
+
+    return tasks
+
+
+@router.post("/{task_id}/complete")
+def complete_task(
     task_id: str,
-    status: StatusEnum,
-    current_user: User = Depends(get_current_user_from_token),
-    session: Session = Depends(get_session)
-) -> TaskResponse:
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """
-    Update the status of a task.
-
-    Args:
-        task_id: ID of the task to update
-        status: New status for the task
-        current_user: Authenticated user
-        session: Database session
-
-    Returns:
-        TaskResponse object with the updated task's information
+    Mark a task as completed
     """
-    from uuid import UUID
-    try:
-        task_uuid = UUID(task_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid task ID format"
-        )
-
-    # Check if the task exists
-    task = TaskService.get_task_by_id(session, task_uuid)
-    if not task:
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
 
-    # Check if the user has permission to update the task
-    has_permission = TaskService.check_task_access(session, task_uuid, current_user.id)
-    if not has_permission:
+    # Check if user has permission to complete the task (creator or assigned)
+    if db_task.created_by != str(current_user.id) and db_task.assigned_to != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this task"
+            detail="Not authorized to complete this task"
         )
 
-    updated_task = TaskService.update_task_status(session, task_uuid, status)
+    completed_task = TaskService.complete_task(db, task_id)
+    if not completed_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    return {"message": "Task completed successfully", "task": completed_task}
+
+
+@router.post("/{task_id}/assign")
+def assign_task(
+    task_id: str,
+    assignee_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Assign a task to a user
+    """
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    # Only the creator can assign the task
+    if db_task.created_by != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to assign this task"
+        )
+
+    assigned_task = TaskService.assign_task(db, task_id, assignee_id)
+    return {"message": "Task assigned successfully", "task": assigned_task}
+
+
+@router.patch("/{task_id}/status")
+def update_task_status(
+    task_id: str,
+    status: schemas.TaskStatus,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Update the status of a task
+    """
+    db_task = TaskService.get_task_by_id(db, task_id)
+    if not db_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    # Check if user has permission to update the task status (creator or assigned)
+    if db_task.created_by != str(current_user.id) and db_task.assigned_to != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update task status"
+        )
+
+    updated_task = TaskService.update_task_status(db, task_id, status)
     if not updated_task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
 
-    return TaskResponse.model_validate(updated_task)
+    return {"message": f"Task status updated to {status.value}", "task": updated_task}
+
+
+@router.get("/stats", response_model=dict)
+def get_task_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Get task statistics for the current user
+    """
+    stats = TaskService.get_task_statistics(db, str(current_user.id))
+    return stats
+
+
+@router.get("/overdue", response_model=List[schemas.TaskResponse])
+def get_overdue_tasks(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Get overdue tasks for the current user
+    """
+    overdue_tasks = TaskService.get_overdue_tasks(db, str(current_user.id))
+    return overdue_tasks

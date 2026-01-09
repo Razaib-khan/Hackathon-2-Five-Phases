@@ -1,70 +1,42 @@
-"""
-User SQLModel Entity
-
-Represents an authenticated application user with:
-- id: UUID primary key
-- email: unique, indexed
-- password_hash: bcrypt hashed password (never store plaintext)
-- created_at, updated_at: timestamps
-
-Relationships:
-- tasks: One-to-many relationship with Task (cascade delete)
-"""
-
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum as SQLEnum, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
-from uuid import UUID, uuid4
-
-from sqlmodel import Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from .task import Task
-    from .tag import Tag
-    from .user_settings import UserSettings
-    from .role import Role, UserRoleLink
-    from .project import Project
+import uuid
+from sqlalchemy.orm import relationship
+from ..config.database import Base
 
 
-# Import after TYPE_CHECKING to avoid circular import during definition
-from .role import UserRoleLink  # noqa: E402
+class UserRole(SQLEnum):
+    PARTICIPANT = "participant"
+    ADMIN = "admin"
 
 
-class User(SQLModel, table=True):
-    """User entity for authentication and task ownership."""
-
+class User(Base):
     __tablename__ = "users"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    username: str = Field(index=True, unique=True, max_length=255)
-    email: str = Field(index=True, unique=True, max_length=255)
-    password_hash: str = Field(max_length=255)
-    first_name: Optional[str] = Field(default=None, max_length=100)
-    last_name: Optional[str] = Field(default=None, max_length=100)
-    is_active: bool = Field(default=True)
-    is_verified: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
-        sa_column_kwargs={"onupdate": datetime.utcnow},
-    )
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.PARTICIPANT)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+    profile_image_url = Column(String, nullable=True)
+    bio = Column(String, nullable=True)
+    gdpr_consent = Column(Boolean, nullable=False, default=False)
+    gdpr_consent_at = Column(DateTime, nullable=True)
+    email_confirmed = Column(Boolean, default=False)
+    confirmation_token = Column(String, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
 
     # Relationships
-    tasks: List["Task"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-    )
-    tags: List["Tag"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-    )
-    roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)
-    settings: Optional["UserSettings"] = Relationship(back_populates="user")
-    owned_projects: List["Project"] = Relationship(back_populates="owner", sa_relationship_kwargs={"foreign_keys": "[Project.owner_id]"})
-
-
-
-class UserPublic(SQLModel):
-    """Public user data (no password_hash) for API responses."""
-
-    id: UUID
-    email: str
+    tasks = relationship("Task", back_populates="created_by_user", foreign_keys="[Task.created_by]")
+    assigned_tasks = relationship("Task", back_populates="assigned_to_user", foreign_keys="[Task.assigned_to]")
+    saved_filters = relationship("TaskFilter", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")
+    verification_codes = relationship("VerificationCode", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user")

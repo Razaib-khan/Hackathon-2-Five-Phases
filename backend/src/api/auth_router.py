@@ -1,50 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
-from typing import Dict, Any
-from datetime import timedelta
-from ..config.database import get_session
-from ..models.user import User
-from ..models.schemas.user import UserCreate, UserResponse
-from ..services.auth_service import AuthService
-from ..utils.auth import get_current_user_from_token
-from ..config.settings import settings
+from sqlalchemy.orm import Session
 
+from ..schemas.user import UserCreate, UserResponse, Token, UserLogin, UserRegister, VerifyCodeRequest, LoginVerificationRequest
+from ..services.auth_service import AuthService
+from ..services.user_service import UserService
+from ..services.email_service import EmailService
+from ..config.database import get_db
+from ..config.auth import get_current_user
+from ..models.user import User
 
 router = APIRouter()
 
 
-@router.post("/auth/register", response_model=UserResponse, summary="Register a new user")
-async def register_user(
-    user_data: UserCreate,
-    session: Session = Depends(get_session)
-) -> UserResponse:
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """
-    Register a new user account.
-
-    Args:
-        user_data: User registration data
-        session: Database session
-
-    Returns:
-        UserResponse object with the created user's information
+    Register a new user with first name, last name, email, password, and password confirmation
     """
-    try:
-        user = AuthService.register_user(session, user_data)
-        # Create UserResponse from user object manually to avoid validation issues
-        return UserResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            is_active=user.is_active,
-            is_verified=user.is_verified,
-            created_at=user.created_at,
-            updated_at=user.updated_at
+    # Check if GDPR consent is provided
+    if not user_data.gdpr_consent:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="GDPR consent is required to register"
         )
+
+    try:
+        result = AuthService.register_user(db, user_data)
+        return result
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         raise HTTPException(
@@ -53,113 +37,151 @@ async def register_user(
         )
 
 
-@router.post("/auth/login", summary="User login")
-async def login_user(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Session = Depends(get_session)
-) -> Dict[str, Any]:
+@router.post("/verify-registration", response_model=Token)
+async def verify_registration(verification_data: VerifyCodeRequest, db: Session = Depends(get_db)):
     """
-    Authenticate user and return JWT tokens.
-
-    Args:
-        form_data: OAuth2 form data with username and password
-        session: Database session
-
-    Returns:
-        Dictionary with access token, refresh token, and token type
+    Verify the registration code sent to the user's email
     """
-    user = AuthService.authenticate_user(session, form_data.username, form_data.password)
-    if not user:
+    try:
+        token = AuthService.verify_registration_code(db, verification_data.user_id, verification_data.code)
+        return token
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during verification: {str(e)}"
+        )
+
+
+@router.post("/initiate-login")
+async def initiate_login(login_data: LoginVerificationRequest, db: Session = Depends(get_db)):
+    """
+    Initiate login by sending verification code to user's email
+    """
+    try:
+        result = AuthService.initiate_login(db, login_data.username_or_email)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during login initiation: {str(e)}"
+        )
+
+
+@router.post("/verify-login", response_model=Token)
+async def verify_login(verification_data: VerifyCodeRequest, db: Session = Depends(get_db)):
+    """
+    Verify the login code and complete authentication
+    """
+    try:
+        token = AuthService.verify_login_code(db, verification_data.user_id, verification_data.code)
+        return token
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during login verification: {str(e)}"
+        )
+
+
+@router.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """
+    Traditional login with username/email and password (for compatibility)
+    """
+    token = AuthService.login_user(db, form_data.username, form_data.password)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    return token
 
-    if not user.is_active:
+
+@router.post("/login-credentials", response_model=Token)
+async def login_with_credentials(login_data: UserLogin, db: Session = Depends(get_db)):
+    """
+    Login with username/email and password (alternative endpoint)
+    """
+    token = AuthService.login_user(db, login_data.username_or_email, login_data.password)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user account",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Create access and refresh tokens
-    access_token = AuthService.create_access_token_for_user(user)
-    refresh_token = AuthService.create_refresh_token_for_user(user)
-
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-        "expires_in": settings.access_token_expire_minutes * 60
-    }
+    return token
 
 
-@router.post("/auth/refresh", summary="Refresh access token")
-async def refresh_token(
-    refresh_token: str,
-    session: Session = Depends(get_session)
-) -> Dict[str, Any]:
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_profile(current_user: User = Depends(get_current_user)):
     """
-    Refresh the access token using the refresh token.
-
-    Args:
-        refresh_token: Refresh token
-        session: Database session
-
-    Returns:
-        Dictionary with new access token and token type
+    Get current user's profile
     """
-    # Verify the refresh token
-    payload = AuthService.verify_token(refresh_token)
-    if payload is None:
+    return current_user
+
+
+@router.post("/confirm-email/{confirmation_token}")
+async def confirm_email(confirmation_token: str, db: Session = Depends(get_db)):
+    """
+    Confirm user email using confirmation token (for backward compatibility)
+    """
+    user = UserService.confirm_email(db, confirmation_token)
+
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired confirmation token"
         )
 
-    # Extract user info from the token
-    username: str = payload.get("sub")
-    if username is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Send welcome email after confirmation
+    try:
+        EmailService.send_welcome_email(user.email, user.username)
+    except Exception:
+        # Log the error but don't fail the confirmation
+        print("Failed to send welcome email")
 
-    # Get user from database
-    user = AuthService.get_user_by_username(session, username)
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Create new access token
-    new_access_token = AuthService.create_access_token_for_user(user)
-
-    return {
-        "access_token": new_access_token,
-        "token_type": "bearer",
-        "expires_in": settings.access_token_expire_minutes * 60
-    }
+    return {"message": "Email confirmed successfully", "user": UserResponse.model_validate(user)}
 
 
-@router.post("/auth/logout", summary="User logout")
-async def logout_user(
-    current_user: User = Depends(get_current_user_from_token)
-) -> Dict[str, str]:
+@router.post("/resend-confirmation")
+async def resend_confirmation(email: str, db: Session = Depends(get_db)):
     """
-    Logout the current user.
-
-    Args:
-        current_user: Authenticated user
-
-    Returns:
-        Success message
+    Resend email confirmation to user
     """
-    # In a real implementation, you might want to invalidate the token
-    # or add it to a blacklist for the remainder of its validity period
-    return {"message": "Successfully logged out"}
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if user.email_confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is already confirmed"
+        )
+
+    # Generate new confirmation token
+    confirmation_token = UserService.generate_confirmation_token(db, str(user.id))
+
+    # Send confirmation email
+    try:
+        EmailService.send_confirmation_email(
+            to_email=user.email,
+            username=user.username,
+            confirmation_token=confirmation_token
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send confirmation email"
+        )
+
+    return {"message": "Confirmation email resent successfully"}
