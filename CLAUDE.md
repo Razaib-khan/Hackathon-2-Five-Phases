@@ -212,6 +212,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 ## Active Technologies
 - Python 3.11+ + None (standard library only - argparse for CLI parsing) (001-cli-todo)
 - In-memory (Python list) (001-cli-todo)
+- Python 3.11 (Backend), TypeScript 5.3 (Frontend) + FastAPI, SQLAlchemy, Next.js 14, Tailwind CSS (001-five-phase-hackathon)
+- PostgreSQL 15 with proper indexing and security measures (001-five-phase-hackathon)
 
 ## Recent Changes
 - 001-cli-todo: Added Python 3.11+ + None (standard library only - argparse for CLI parsing)

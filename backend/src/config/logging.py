@@ -2,87 +2,135 @@ import logging
 import sys
 from datetime import datetime
 from typing import Optional
-from .settings import settings
+from pythonjsonlogger import jsonlogger
 
 
-class CustomFormatter(logging.Formatter):
-    """Custom formatter to add color and additional context to logs."""
-
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    reset = "\x1b[0m"
-    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
-
-    FORMATS = {
-        logging.DEBUG: grey + format + reset,
-        logging.INFO: grey + format + reset,
-        logging.WARNING: yellow + format + reset,
-        logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super().add_fields(log_record, record, message_dict)
+        if not log_record.get('timestamp'):
+            # Add timestamp in ISO format
+            log_record['timestamp'] = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
+        else:
+            log_record['level'] = record.levelname
 
 
-def setup_logging(
-    name: Optional[str] = None,
-    level: Optional[int] = None,
-    log_file: Optional[str] = None
-) -> logging.Logger:
+def setup_logging(log_level: str = "INFO", json_format: bool = True):
     """
-    Set up logging with custom formatting.
-
-    Args:
-        name: Name of the logger (defaults to __name__)
-        level: Logging level (defaults to settings.log_level)
-        log_file: Optional file to log to
-
-    Returns:
-        Configured logger instance
+    Set up comprehensive logging configuration
     """
-    if name is None:
-        name = __name__
+    # Create a custom logger
+    logger = logging.getLogger()
+    logger.setLevel(getattr(logging, log_level.upper()))
 
-    if level is None:
-        level = getattr(logging, settings.log_level.upper())
+    # Clear any existing handlers
+    logger.handlers.clear()
 
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    # Create a handler that outputs to stdout
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(getattr(logging, log_level.upper()))
 
-    # Prevent adding multiple handlers if logger already configured
-    if logger.handlers:
-        return logger
-
-    # Create console handler with custom formatting
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(CustomFormatter())
-
-    # Add console handler
-    logger.addHandler(console_handler)
-
-    # Optionally add file handler
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(level)
-        file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    if json_format:
+        # Use JSON formatter
+        formatter = CustomJsonFormatter(
+            '%(timestamp)s %(level)s %(name)s %(message)s %(module)s %(funcName)s %(lineno)d',
+            rename_fields={'levelname': 'level', 'name': 'logger', 'funcName': 'function'}
         )
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
+    else:
+        # Use standard formatter
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s - [%(module)s:%(funcName)s:%(lineno)d]'
+        )
+
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    # Also configure uvicorn loggers to use the same format
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_logger.handlers.clear()
+    uvicorn_logger.addHandler(handler)
+    uvicorn_logger.setLevel(getattr(logging, log_level.upper()))
+
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.handlers.clear()
+    access_logger.addHandler(handler)
+    access_logger.setLevel(getattr(logging, log_level.upper()))
 
     return logger
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Get a configured logger instance."""
-    return setup_logging(name=name)
+    """
+    Get a logger with the specified name
+    """
+    return logging.getLogger(name)
 
 
-# Initialize root logger
-root_logger = setup_logging(name="aido", level=getattr(logging, settings.log_level.upper()))
+def log_api_call(
+    endpoint: str,
+    method: str,
+    user_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    status_code: Optional[int] = None,
+    response_time: Optional[float] = None,
+    extra: Optional[dict] = None
+):
+    """
+    Log an API call with structured data
+    """
+    logger = get_logger("api")
+    log_data = {
+        "event": "api_call",
+        "endpoint": endpoint,
+        "method": method,
+        "user_id": user_id,
+        "ip_address": ip_address,
+        "status_code": status_code,
+        "response_time_ms": response_time,
+        **(extra or {})
+    }
+    logger.info("API call", extra=log_data)
+
+
+def log_security_event(
+    event_type: str,
+    user_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    description: str = "",
+    severity: str = "medium"
+):
+    """
+    Log a security-related event
+    """
+    logger = get_logger("security")
+    log_data = {
+        "event": "security_event",
+        "event_type": event_type,
+        "user_id": user_id,
+        "ip_address": ip_address,
+        "description": description,
+        "severity": severity
+    }
+    logger.warning("Security event", extra=log_data)
+
+
+def log_performance_metric(
+    metric_name: str,
+    value: float,
+    unit: str = "",
+    tags: Optional[dict] = None
+):
+    """
+    Log a performance metric
+    """
+    logger = get_logger("performance")
+    log_data = {
+        "event": "performance_metric",
+        "metric_name": metric_name,
+        "value": value,
+        "unit": unit,
+        "tags": tags or {}
+    }
+    logger.info("Performance metric", extra=log_data)

@@ -1,270 +1,182 @@
-from sqlmodel import Session, select
-from typing import Optional, List
-from uuid import UUID
+from typing import Optional
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
-from ..models.user import User
-from ..models.schemas.user import UserCreate, UserUpdate, UserResponse
-from ..utils.security import validate_password_strength, is_valid_email
-from datetime import datetime
+
+from ..models.user import User, UserRole
+from ..schemas.user import UserCreate, UserUpdate, UserResponse
+from ..config.auth import get_password_hash, verify_password
 
 
 class UserService:
-    """Service class for handling user-related operations."""
+    @staticmethod
+    def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+        """Get a user by their ID"""
+        return db.query(User).filter(User.id == user_id).first()
 
     @staticmethod
-    def get_user_by_id(session: Session, user_id: UUID) -> Optional[User]:
-        """
-        Get a user by ID.
-
-        Args:
-            session: Database session
-            user_id: User ID to search for
-
-        Returns:
-            User object if found, None otherwise
-        """
-        return session.get(User, user_id)
+    def get_user_by_email(db: Session, email: str) -> Optional[User]:
+        """Get a user by their email"""
+        return db.query(User).filter(User.email == email).first()
 
     @staticmethod
-    def get_user_by_username(session: Session, username: str) -> Optional[User]:
-        """
-        Get a user by username.
-
-        Args:
-            session: Database session
-            username: Username to search for
-
-        Returns:
-            User object if found, None otherwise
-        """
-        return session.exec(select(User).where(User.username == username)).first()
+    def get_user_by_username(db: Session, username: str) -> Optional[User]:
+        """Get a user by their username"""
+        return db.query(User).filter(User.username == username).first()
 
     @staticmethod
-    def get_user_by_email(session: Session, email: str) -> Optional[User]:
-        """
-        Get a user by email.
-
-        Args:
-            session: Database session
-            email: Email to search for
-
-        Returns:
-            User object if found, None otherwise
-        """
-        return session.exec(select(User).where(User.email == email)).first()
+    def get_user_by_email_or_username(db: Session, email_or_username: str) -> Optional[User]:
+        """Get a user by either their email or username"""
+        user = db.query(User).filter(User.email == email_or_username).first()
+        if not user:
+            user = db.query(User).filter(User.username == email_or_username).first()
+        return user
 
     @staticmethod
-    def get_users(session: Session, skip: int = 0, limit: int = 100) -> List[User]:
-        """
-        Get a list of users.
+    def create_user(db: Session, user_data: UserCreate) -> User:
+        """Create a new user"""
+        # Check if user with email or username already exists
+        existing_user = (
+            db.query(User)
+            .filter((User.email == user_data.email) | (User.username == user_data.username))
+            .first()
+        )
 
-        Args:
-            session: Database session
-            skip: Number of users to skip
-            limit: Maximum number of users to return
-
-        Returns:
-            List of User objects
-        """
-        return session.exec(select(User).offset(skip).limit(limit)).all()
-
-    @staticmethod
-    def create_user(session: Session, user_data: UserCreate) -> User:
-        """
-        Create a new user.
-
-        Args:
-            session: Database session
-            user_data: User creation data
-
-        Returns:
-            Created User object
-
-        Raises:
-            HTTPException: If username or email already exists
-        """
-        # Check if username already exists
-        existing_user = session.exec(select(User).where(User.username == user_data.username)).first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Username already registered"
-            )
-
-        # Check if email already exists
-        existing_email = session.exec(select(User).where(User.email == user_data.email)).first()
-        if existing_email:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email already registered"
-            )
-
-        # Validate email format
-        if not is_valid_email(user_data.email):
-            raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid email format"
+                detail="User with this email or username already exists"
             )
 
-        # Validate password strength
-        is_valid, error_msg = validate_password_strength(user_data.password)
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_msg
-            )
+        # Hash the password
+        password_hash = get_password_hash(user_data.password)
 
-        # Create new user
-        from ..utils.auth import get_password_hash
-        hashed_password = get_password_hash(user_data.password)
+        # Create the user object
         db_user = User(
-            username=user_data.username,
             email=user_data.email,
-            password_hash=hashed_password,
+            username=user_data.username,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
-            is_active=True,
-            is_verified=False  # New users need to verify their email
+            password_hash=password_hash,
+            role=user_data.role if user_data.role else UserRole.PARTICIPANT,
+            profile_image_url=user_data.profile_image_url,
+            bio=user_data.bio,
+            skills=str(user_data.skills) if user_data.skills else None,
+            gdpr_consent=user_data.gdpr_consent,
+            gdpr_consent_at=user_data.gdpr_consent if user_data.gdpr_consent else None,
+            email_confirmed=user_data.email_confirmed,
+            confirmation_token=user_data.confirmation_token
         )
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+
+        # Add to database
+        db.add(db_user)
+        try:
+            db.commit()
+            db.refresh(db_user)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email or username already exists"
+            )
+
         return db_user
 
     @staticmethod
-    def update_user(session: Session, user_id: UUID, user_update: UserUpdate) -> Optional[User]:
-        """
-        Update a user.
+    def update_user(db: Session, user_id: str, user_data: UserUpdate) -> Optional[User]:
+        """Update a user's profile"""
+        db_user = db.query(User).filter(User.id == user_id).first()
 
-        Args:
-            session: Database session
-            user_id: ID of user to update
-            user_update: User update data
-
-        Returns:
-            Updated User object if successful, None if user not found
-        """
-        db_user = session.get(User, user_id)
         if not db_user:
             return None
 
-        # Check if username is being changed and already exists
-        if user_update.username and user_update.username != db_user.username:
-            existing_user = session.exec(select(User).where(User.username == user_update.username)).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Username already registered"
-                )
-
-        # Check if email is being changed and already exists
-        if user_update.email and user_update.email != db_user.email:
-            existing_email = session.exec(select(User).where(User.email == user_update.email)).first()
-            if existing_email:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Email already registered"
-                )
-
-            # Validate email format
-            if not is_valid_email(user_update.email):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid email format"
-                )
-
-        # Update user fields
-        update_data = user_update.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
+        # Update fields that are provided
+        for field, value in user_data.model_dump(exclude_unset=True).items():
             setattr(db_user, field, value)
 
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+        db.commit()
+        db.refresh(db_user)
+
         return db_user
 
     @staticmethod
-    def delete_user(session: Session, user_id: UUID) -> bool:
-        """
-        Delete a user.
+    def authenticate_user(db: Session, username_or_email: str, password: str) -> Optional[User]:
+        """Authenticate a user by username/email and password"""
+        # Try to find user by username first, then by email
+        user = db.query(User).filter(User.username == username_or_email).first()
+        if not user:
+            user = db.query(User).filter(User.email == username_or_email).first()
 
-        Args:
-            session: Database session
-            user_id: ID of user to delete
+        if not user or not verify_password(password, user.password_hash):
+            return None
 
-        Returns:
-            True if user was deleted, False if user not found
-        """
-        db_user = session.get(User, user_id)
+        return user
+
+    @staticmethod
+    def activate_user(db: Session, user_id: str) -> Optional[User]:
+        """Activate a user account"""
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if db_user:
+            db_user.is_active = True
+            db.commit()
+            db.refresh(db_user)
+        return db_user
+
+    @staticmethod
+    def deactivate_user(db: Session, user_id: str) -> Optional[User]:
+        """Deactivate a user account"""
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if db_user:
+            db_user.is_active = False
+            db.commit()
+            db.refresh(db_user)
+        return db_user
+
+    @staticmethod
+    def generate_confirmation_token(db: Session, user_id: str) -> Optional[str]:
+        """Generate a confirmation token for email verification"""
+        import secrets
+        import string
+        from datetime import datetime
+
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if not db_user:
+            return None
+
+        # Generate a random confirmation token
+        confirmation_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
+        db_user.confirmation_token = confirmation_token
+        db.commit()
+        db.refresh(db_user)
+
+        return confirmation_token
+
+    @staticmethod
+    def confirm_email(db: Session, confirmation_token: str) -> Optional[User]:
+        """Confirm user email using confirmation token"""
+        from datetime import datetime
+
+        db_user = db.query(User).filter(
+            User.confirmation_token == confirmation_token,
+            User.email_confirmed == False
+        ).first()
+
+        if not db_user:
+            return None
+
+        # Confirm the email
+        db_user.email_confirmed = True
+        db_user.confirmed_at = datetime.utcnow()
+        db_user.confirmation_token = None  # Clear the token after confirmation
+        db.commit()
+        db.refresh(db_user)
+
+        return db_user
+
+    @staticmethod
+    def is_email_confirmed(db: Session, user_id: str) -> bool:
+        """Check if user's email is confirmed"""
+        db_user = db.query(User).filter(User.id == user_id).first()
         if not db_user:
             return False
-
-        session.delete(db_user)
-        session.commit()
-        return True
-
-    @staticmethod
-    def activate_user(session: Session, user_id: UUID) -> Optional[User]:
-        """
-        Activate a user account.
-
-        Args:
-            session: Database session
-            user_id: ID of user to activate
-
-        Returns:
-            Updated User object if successful, None if user not found
-        """
-        db_user = session.get(User, user_id)
-        if not db_user:
-            return None
-
-        db_user.is_active = True
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-        return db_user
-
-    @staticmethod
-    def deactivate_user(session: Session, user_id: UUID) -> Optional[User]:
-        """
-        Deactivate a user account.
-
-        Args:
-            session: Database session
-            user_id: ID of user to deactivate
-
-        Returns:
-            Updated User object if successful, None if user not found
-        """
-        db_user = session.get(User, user_id)
-        if not db_user:
-            return None
-
-        db_user.is_active = False
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-        return db_user
-
-    @staticmethod
-    def verify_user(session: Session, user_id: int) -> Optional[User]:
-        """
-        Verify a user's email.
-
-        Args:
-            session: Database session
-            user_id: ID of user to verify
-
-        Returns:
-            Updated User object if successful, None if user not found
-        """
-        db_user = session.get(User, user_id)
-        if not db_user:
-            return None
-
-        db_user.is_verified = True
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
-        return db_user
+        return db_user.email_confirmed

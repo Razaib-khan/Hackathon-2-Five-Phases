@@ -1,192 +1,163 @@
-from fastapi import HTTPException, status, Request
-from typing import Optional, Callable, List
-import logging
-from ..models.user import User
-from ..services.rbac_service import RBACService
-from ..config.database import get_session
+from functools import wraps
+from fastapi import Depends, HTTPException, status
+from typing import List, Union
+
+from ..config.auth import get_current_user
+from ..models.user import User, UserRole
 
 
-logger = logging.getLogger(__name__)
-
-
-class RBACMiddleware:
-    """Role-Based Access Control middleware to enforce permissions."""
-
-    def __init__(self):
-        pass
-
-    async def check_permissions(
-        self,
-        request: Request,
-        user: User,
-        resource: str,
-        action: str,
-        resource_id: Optional[int] = None
-    ) -> bool:
-        """
-        Check if a user has permission to perform an action on a resource.
-
-        Args:
-            request: FastAPI request object
-            user: Authenticated user object
-            resource: Resource type (e.g., 'user', 'task', 'project')
-            action: Action type (e.g., 'read', 'create', 'update', 'delete')
-            resource_id: Optional resource ID for specific resource access checks
-
-        Returns:
-            True if user has permission, False otherwise
-        """
-        try:
-            with next(get_session()) as session:
-                # First check general permissions
-                has_general_permission = RBACService.check_permission(
-                    session, user.id, resource, action
+def require_role(required_role: Union[UserRole, List[UserRole]]):
+    """
+    Middleware to check if the current user has the required role(s).
+    Can accept a single role or a list of roles.
+    """
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if isinstance(required_role, list):
+            # Check if user's role is in the required roles list
+            if current_user.role not in required_role:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions"
+                )
+        else:
+            # Check if user's role matches the required role
+            if current_user.role != required_role:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions"
                 )
 
-                if not has_general_permission:
-                    # For specific resources, check ownership or special access
-                    if resource_id is not None:
-                        has_resource_access = RBACService.check_resource_access(
-                            session, user.id, resource, resource_id
-                        )
-                        return has_resource_access
+        return current_user
 
-                    return False
+    return role_checker
 
-                return True
 
-        except Exception as e:
-            logger.error(f"Error checking permissions: {e}")
-            return False
+def require_any_role(*roles: UserRole):
+    """
+    Middleware to check if the current user has any of the specified roles.
+    Usage: @require_any_role(UserRole.ADMIN, UserRole.ORGANIZER)
+    """
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        return current_user
 
-    def require_permission(self, resource: str, action: str):
-        """
-        Decorator factory to create permission checking decorators.
+    return role_checker
 
-        Args:
-            resource: Resource type (e.g., 'user', 'task', 'project')
-            action: Action type (e.g., 'read', 'create', 'update', 'delete')
 
-        Returns:
-            Permission checking decorator
-        """
-        def permission_checker(user: User, resource_id: Optional[int] = None):
-            with next(get_session()) as session:
-                # Check general permissions
-                has_permission = RBACService.check_permission(
-                    session, user.id, resource, action
-                )
+def require_permission(permission: str):
+    """
+    Middleware to check if the current user has a specific permission.
+    This is a simplified version - in a real app, you'd have a more complex permissions system.
+    """
+    def permission_checker(current_user: User = Depends(get_current_user)):
+        # Define permissions mapping based on roles
+        role_permissions = {
+            UserRole.PARTICIPANT: [
+                "view_own_profile",
+                "edit_own_profile",
+                "view_hackathons",
+                "join_hackathons",
+                "create_teams",
+                "submit_projects",
+                "view_notifications"
+            ],
+            UserRole.JUDGE: [
+                "view_own_profile",
+                "edit_own_profile",
+                "view_hackathons",
+                "view_submissions",
+                "evaluate_submissions",
+                "view_notifications"
+            ],
+            UserRole.ADMIN: [
+                "view_own_profile",
+                "edit_own_profile",
+                "view_hackathons",
+                "manage_hackathons",
+                "manage_users",
+                "send_notifications",
+                "view_reports",
+                "view_all_submissions",
+                "view_all_teams",
+                "view_all_participants"
+            ]
+        }
 
-                if not has_permission and resource_id is not None:
-                    # Check specific resource access (ownership, etc.)
-                    has_resource_access = RBACService.check_resource_access(
-                        session, user.id, resource, resource_id
-                    )
-                    if not has_resource_access:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=f"You don't have permission to {action} {resource}"
-                        )
-                elif not has_permission:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"You don't have permission to {action} {resource}"
-                    )
+        user_permissions = role_permissions.get(current_user.role, [])
 
-        return permission_checker
+        if permission not in user_permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
 
-    async def check_admin_access(self, request: Request, user: User) -> bool:
-        """
-        Check if a user has admin access.
+        return current_user
 
-        Args:
-            request: FastAPI request object
-            user: Authenticated user object
+    return permission_checker
 
-        Returns:
-            True if user has admin access, False otherwise
-        """
-        try:
-            with next(get_session()) as session:
-                return RBACService.check_admin_access(session, user.id)
-        except Exception as e:
-            logger.error(f"Error checking admin access: {e}")
-            return False
 
-    async def check_user_management_access(
-        self,
-        request: Request,
-        current_user: User,
-        target_user_id: int
-    ) -> bool:
-        """
-        Check if a user can manage another user.
+def is_admin(current_user: User = Depends(get_current_user)):
+    """
+    Convenience function to check if user is admin
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
 
-        Args:
-            request: FastAPI request object
-            current_user: User performing the action
-            target_user_id: ID of the user being managed
 
-        Returns:
-            True if current user has management access, False otherwise
-        """
-        try:
-            with next(get_session()) as session:
-                return RBACService.check_user_management_access(
-                    session, current_user.id, target_user_id
-                )
-        except Exception as e:
-            logger.error(f"Error checking user management access: {e}")
-            return False
+def is_authorized_for_hackathon(hackathon_id: str, current_user: User = Depends(get_current_user)):
+    """
+    Check if user is authorized to access hackathon resources.
+    A user can access a hackathon if they are:
+    - An admin
+    - The creator of the hackathon
+    - A participant in the hackathon
+    - A judge for the hackathon
+    """
+    from sqlalchemy.orm import Session
+    from ..config.database import get_db
+    from ..models.hackathon import Hackathon, HackathonParticipant
 
-    async def check_task_management_access(
-        self,
-        request: Request,
-        current_user: User,
-        task_id: int
-    ) -> bool:
-        """
-        Check if a user can manage a task.
+    # Create a temporary session - in practice, you'd inject this differently
+    db: Session = next(get_db())
 
-        Args:
-            request: FastAPI request object
-            current_user: User performing the action
-            task_id: ID of the task being managed
+    try:
+        # Get hackathon to check creator
+        hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
 
-        Returns:
-            True if current user has management access, False otherwise
-        """
-        try:
-            with next(get_session()) as session:
-                return RBACService.check_task_management_access(
-                    session, current_user.id, task_id
-                )
-        except Exception as e:
-            logger.error(f"Error checking task management access: {e}")
-            return False
+        if not hackathon:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Hackathon not found"
+            )
 
-    async def check_project_management_access(
-        self,
-        request: Request,
-        current_user: User,
-        project_id: int
-    ) -> bool:
-        """
-        Check if a user can manage a project.
+        # Admins can access any hackathon
+        if current_user.role == UserRole.ADMIN:
+            return current_user
 
-        Args:
-            request: FastAPI request object
-            current_user: User performing the action
-            project_id: ID of the project being managed
+        # Creator can access their hackathon
+        if str(hackathon.created_by) == str(current_user.id):
+            return current_user
 
-        Returns:
-            True if current user has management access, False otherwise
-        """
-        try:
-            with next(get_session()) as session:
-                return RBACService.check_project_management_access(
-                    session, current_user.id, project_id
-                )
-        except Exception as e:
-            logger.error(f"Error checking project management access: {e}")
-            return False
+        # Check if user is a participant or judge in this hackathon
+        participant = db.query(HackathonParticipant).filter(
+            HackathonParticipant.hackathon_id == hackathon_id,
+            HackathonParticipant.user_id == current_user.id
+        ).first()
+
+        if participant and participant.role in ["participant", "judge", "mentor"]:
+            return current_user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this hackathon"
+        )
+    finally:
+        db.close()

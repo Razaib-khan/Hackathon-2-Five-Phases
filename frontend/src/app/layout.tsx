@@ -1,46 +1,32 @@
-import type { Metadata } from 'next'
-import '@/styles/globals.css'
-import { AuthProvider } from '@/lib/auth-context'
-import { ThemeProvider } from '@/contexts/ThemeContext'
-import { SettingsProvider } from '@/contexts/SettingsContext'
-import { ViewProvider } from '@/contexts/ViewContext'
-import { FilterProvider } from '@/contexts/FilterContext'
-import { Toaster } from 'sonner'
+import { AuthProvider } from '../hooks/useAuth';
+import './globals.css';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 
-export async function generateMetadata(): Promise<Metadata> {
-  const basePath = process.env.GITHUB_PAGES ? '/Hackathon-2-Five-Phases' : '';
-  const iconPath = `${basePath}/favicon-32x32.png`;
+const inter = Inter({ subsets: ['latin'] });
 
-  return {
-    title: 'AIDO Todo',
-    description: 'A modern task management application with JWT authentication',
-    icons: {
-      icon: iconPath,
-    },
-  };
-}
+export const metadata: Metadata = {
+  title: 'Five Phase Hackathon Platform',
+  description: 'Manage hackathons through all five phases: Registration, Ideation, Development, Submission, and Presentation/Judging',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50">
-        <ThemeProvider>
-          <AuthProvider>
-            <SettingsProvider>
-              <ViewProvider>
-                <FilterProvider>
-                  {children}
-                  <Toaster position="top-right" richColors />
-                </FilterProvider>
-              </ViewProvider>
-            </SettingsProvider>
-          </AuthProvider>
-        </ThemeProvider>
+      <body className={inter.className}>
+        <AuthProvider>
+          <div className="min-h-screen bg-gray-50">
+            {/* Navigation will be added in a later task */}
+            <main className="container mx-auto px-4 py-8">
+              {children}
+            </main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
-  )
+  );
 }
