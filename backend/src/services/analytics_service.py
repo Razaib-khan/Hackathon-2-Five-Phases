@@ -192,7 +192,7 @@ class AnalyticsService:
 
             trend_data.append(
                 CompletionTrendDataPoint(
-                    date=current_date,
+                    date_value=current_date,
                     completed=completions,
                     created=creations,
                 )

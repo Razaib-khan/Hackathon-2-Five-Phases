@@ -26,7 +26,7 @@ class PriorityDistribution(BaseModel):
 class CompletionTrendDataPoint(BaseModel):
     """Single day completion statistics."""
 
-    date: date = Field(..., description="Date", examples=["2026-01-03"])
+    date_value: date = Field(..., description="Date", examples=["2026-01-03"])
     completed: int = Field(..., description="Tasks completed on this date", examples=[7])
     created: int = Field(..., description="Tasks created on this date", examples=[5])
 
