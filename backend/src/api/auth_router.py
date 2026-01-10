@@ -1,187 +1,404 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlmodel import Session
+from typing import Dict, Optional
+from ..models.user import User, UserBase
+from ..database.database import get_session
+from ..auth.auth_handler import auth_handler
+from ..services.auth_service import UserService
+from ..services.email_service import email_service
+from ..utils.errors import UserAlreadyExistsException, InvalidCredentialsException, PasswordResetTokenExpiredException, PasswordResetTokenUsedException
+from ..config.settings import settings
+from pydantic import BaseModel
+import uuid
+from datetime import datetime, timedelta
 
-from ..schemas.user import UserCreate, UserResponse, Token, UserLogin, UserRegister, VerifyCodeRequest, LoginVerificationRequest
-from ..services.auth_service import AuthService
-from ..services.user_service import UserService
-from ..services.email_service import EmailService
-from ..config.database import get_db
-from ..config.auth import get_current_user
-from ..models.user import User
 
-router = APIRouter()
+class RegisterRequest(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    password: str
+    confirm_password: str
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    """
-    Register a new user with first name, last name, email, password, and password confirmation
-    """
-    # Check if GDPR consent is provided
-    if not user_data.gdpr_consent:
+class RegisterResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    first_name: str
+    last_name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_new_password: str
+
+
+class BetterAuthSignInRequest(BaseModel):
+    email: str
+    password: str
+    callbackURL: Optional[str] = None
+
+
+class BetterAuthSignUpRequest(BaseModel):
+    email: str
+    password: str
+    name: str  # Better Auth typically sends name as a single field
+    callbackURL: Optional[str] = None
+
+
+class BetterAuthSessionResponse(BaseModel):
+    session: Dict
+    user: Dict
+
+
+auth_router = APIRouter()
+
+
+@auth_router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+def register(request: RegisterRequest, session: Session = Depends(get_session)):
+    # Check if passwords match
+    if request.password != request.confirm_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="GDPR consent is required to register"
+            detail="Passwords do not match"
         )
 
-    try:
-        result = AuthService.register_user(db, user_data)
-        return result
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during registration: {str(e)}"
-        )
+    # Use UserService to create user
+    user = UserService.create_user(
+        session=session,
+        first_name=request.first_name,
+        last_name=request.last_name,
+        email=request.email,
+        password=request.password
+    )
+
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name
+    )
 
 
-@router.post("/verify-registration", response_model=Token)
-async def verify_registration(verification_data: VerifyCodeRequest, db: Session = Depends(get_db)):
-    """
-    Verify the registration code sent to the user's email
-    """
-    try:
-        token = AuthService.verify_registration_code(db, verification_data.user_id, verification_data.code)
-        return token
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during verification: {str(e)}"
-        )
-
-
-@router.post("/initiate-login")
-async def initiate_login(login_data: LoginVerificationRequest, db: Session = Depends(get_db)):
-    """
-    Initiate login by sending verification code to user's email
-    """
-    try:
-        result = AuthService.initiate_login(db, login_data.username_or_email)
-        return result
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during login initiation: {str(e)}"
-        )
-
-
-@router.post("/verify-login", response_model=Token)
-async def verify_login(verification_data: VerifyCodeRequest, db: Session = Depends(get_db)):
-    """
-    Verify the login code and complete authentication
-    """
-    try:
-        token = AuthService.verify_login_code(db, verification_data.user_id, verification_data.code)
-        return token
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during login verification: {str(e)}"
-        )
-
-
-@router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """
-    Traditional login with username/email and password (for compatibility)
-    """
-    token = AuthService.login_user(db, form_data.username, form_data.password)
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return token
-
-
-@router.post("/login-credentials", response_model=Token)
-async def login_with_credentials(login_data: UserLogin, db: Session = Depends(get_db)):
-    """
-    Login with username/email and password (alternative endpoint)
-    """
-    token = AuthService.login_user(db, login_data.username_or_email, login_data.password)
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return token
-
-
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(current_user: User = Depends(get_current_user)):
-    """
-    Get current user's profile
-    """
-    return current_user
-
-
-@router.post("/confirm-email/{confirmation_token}")
-async def confirm_email(confirmation_token: str, db: Session = Depends(get_db)):
-    """
-    Confirm user email using confirmation token (for backward compatibility)
-    """
-    user = UserService.confirm_email(db, confirmation_token)
+@auth_router.post("/login", response_model=LoginResponse)
+def login(request: LoginRequest, session: Session = Depends(get_session)):
+    # Use UserService to authenticate user
+    user = UserService.authenticate_user(
+        session=session,
+        email=request.email,
+        password=request.password
+    )
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired confirmation token"
-        )
+        raise InvalidCredentialsException()
 
-    # Send welcome email after confirmation
-    try:
-        EmailService.send_welcome_email(user.email, user.username)
-    except Exception:
-        # Log the error but don't fail the confirmation
-        print("Failed to send welcome email")
+    # Create access token
+    token_data = {"sub": str(user.id)}
+    access_token = auth_handler.create_access_token(data=token_data)
 
-    return {"message": "Email confirmed successfully", "user": UserResponse.model_validate(user)}
+    return LoginResponse(access_token=access_token)
 
 
-@router.post("/resend-confirmation")
-async def resend_confirmation(email: str, db: Session = Depends(get_db)):
-    """
-    Resend email confirmation to user
-    """
-    user = db.query(User).filter(User.email == email).first()
+# Better Auth compatible endpoints
+@auth_router.post("/auth/sign-in")
+def better_auth_sign_in(request: BetterAuthSignInRequest, session: Session = Depends(get_session)):
+    # Authenticate user
+    user = UserService.authenticate_user(
+        session=session,
+        email=request.email,
+        password=request.password
+    )
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise InvalidCredentialsException()
 
-    if user.email_confirmed:
+    # Create access token
+    token_data = {"sub": str(user.id)}
+    access_token = auth_handler.create_access_token(data=token_data)
+
+    # Calculate expiration time
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+
+    # Return session and user data in Better Auth format
+    session_data = {
+        "accessToken": access_token,
+        "expiresAt": expires_at.isoformat() + "Z",  # ISO format with Z suffix for UTC
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "firstName": user.first_name,
+            "lastName": user.last_name
+        }
+    }
+
+    return {
+        "session": session_data,
+        "user": session_data["user"]
+    }
+
+
+@auth_router.post("/auth/sign-up")
+def better_auth_sign_up(request: BetterAuthSignUpRequest, session: Session = Depends(get_session)):
+    # Check if user already exists
+    existing_user = UserService.get_user_by_email(session, request.email)
+    if existing_user:
+        raise UserAlreadyExistsException()
+
+    # Split the name into first and last name
+    name_parts = request.name.split(' ', 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+    # Create new user
+    user = UserService.create_user(
+        session=session,
+        first_name=first_name,
+        last_name=last_name,
+        email=request.email,
+        password=request.password
+    )
+
+    # Create access token
+    token_data = {"sub": str(user.id)}
+    access_token = auth_handler.create_access_token(data=token_data)
+
+    # Calculate expiration time
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+
+    # Return session and user data in Better Auth format
+    session_data = {
+        "accessToken": access_token,
+        "expiresAt": expires_at.isoformat() + "Z",  # ISO format with Z suffix for UTC
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "firstName": user.first_name,
+            "lastName": user.last_name
+        }
+    }
+
+    return {
+        "session": session_data,
+        "user": session_data["user"]
+    }
+
+
+@auth_router.post("/auth/sign-up/email")
+def better_auth_sign_up_email(request: BetterAuthSignUpRequest, session: Session = Depends(get_session)):
+    """Alternative endpoint for sign-up via email (matching Better Auth's expected pattern)"""
+    # Check if user already exists
+    existing_user = UserService.get_user_by_email(session, request.email)
+    if existing_user:
+        raise UserAlreadyExistsException()
+
+    # Split the name into first and last name
+    name_parts = request.name.split(' ', 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+    # Create new user
+    user = UserService.create_user(
+        session=session,
+        first_name=first_name,
+        last_name=last_name,
+        email=request.email,
+        password=request.password
+    )
+
+    # Create access token
+    token_data = {"sub": str(user.id)}
+    access_token = auth_handler.create_access_token(data=token_data)
+
+    # Calculate expiration time
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+
+    # Return session and user data in Better Auth format
+    session_data = {
+        "accessToken": access_token,
+        "expiresAt": expires_at.isoformat() + "Z",  # ISO format with Z suffix for UTC
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "firstName": user.first_name,
+            "lastName": user.last_name
+        }
+    }
+
+    return {
+        "session": session_data,
+        "user": session_data["user"]
+    }
+
+
+@auth_router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(request: ForgotPasswordRequest, session: Session = Depends(get_session)):
+    # Initiate password reset - this will return success regardless of whether user exists
+    # to prevent user enumeration attacks
+    user = UserService.get_user_by_email(session, request.email)
+    token_id = UserService.initiate_password_reset(session, request.email)
+
+    if token_id and user:
+        # Construct the reset link
+        reset_link = f"{settings.base_url}/auth/reset-password?token={token_id}"
+
+        # Send password reset email
+        try:
+            email_service.send_password_reset_email(request.email, reset_link)
+        except Exception as e:
+            # Log the error but still return success to prevent user enumeration
+            from ..utils.logging import app_logger
+            app_logger.error(f"Failed to send password reset email to {request.email}: {str(e)}")
+
+    # Always return success to prevent user enumeration
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@auth_router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(request: ResetPasswordRequest, session: Session = Depends(get_session)):
+    # Check if passwords match
+    if request.new_password != request.confirm_new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is already confirmed"
+            detail="New passwords do not match"
         )
 
-    # Generate new confirmation token
-    confirmation_token = UserService.generate_confirmation_token(db, str(user.id))
+    # Attempt to reset the password using the token
+    success = UserService.reset_password(session, request.token, request.new_password)
 
-    # Send confirmation email
-    try:
-        EmailService.send_confirmation_email(
-            to_email=user.email,
-            username=user.username,
-            confirmation_token=confirmation_token
-        )
-    except Exception as e:
+    if not success:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send confirmation email"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token"
         )
 
-    return {"message": "Confirmation email resent successfully"}
+    return {"message": "Password reset successfully"}
+
+
+# Original API endpoints for frontend compatibility
+@auth_router.post("/auth/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+def register_original(request: RegisterRequest, session: Session = Depends(get_session)):
+    # Check if passwords match
+    if request.password != request.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match"
+        )
+
+    # Use UserService to create user
+    user = UserService.create_user(
+        session=session,
+        first_name=request.first_name,
+        last_name=request.last_name,
+        email=request.email,
+        password=request.password
+    )
+
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name
+    )
+
+
+@auth_router.post("/auth/login", response_model=LoginResponse)
+def login_original(request: LoginRequest, session: Session = Depends(get_session)):
+    # Use UserService to authenticate user
+    user = UserService.authenticate_user(
+        session=session,
+        email=request.email,
+        password=request.password
+    )
+
+    if not user:
+        raise InvalidCredentialsException()
+
+    # Create access token
+    token_data = {"sub": str(user.id)}
+    access_token = auth_handler.create_access_token(data=token_data)
+
+    return LoginResponse(access_token=access_token)
+
+
+@auth_router.post("/auth/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password_original(request: ForgotPasswordRequest, session: Session = Depends(get_session)):
+    # Initiate password reset - this will return success regardless of whether user exists
+    # to prevent user enumeration attacks
+    user = UserService.get_user_by_email(session, request.email)
+    token_id = UserService.initiate_password_reset(session, request.email)
+
+    if token_id and user:
+        # Construct the reset link
+        reset_link = f"{settings.base_url}/auth/reset-password?token={token_id}"
+
+        # Send password reset email
+        try:
+            email_service.send_password_reset_email(request.email, reset_link)
+        except Exception as e:
+            # Log the error but still return success to prevent user enumeration
+            from ..utils.logging import app_logger
+            app_logger.error(f"Failed to send password reset email to {request.email}: {str(e)}")
+
+    # Always return success to prevent user enumeration
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@auth_router.post("/auth/reset-password", status_code=status.HTTP_200_OK)
+def reset_password_original(request: ResetPasswordRequest, session: Session = Depends(get_session)):
+    # Check if passwords match
+    if request.new_password != request.confirm_new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New passwords do not match"
+        )
+
+    # Attempt to reset the password using the token
+    success = UserService.reset_password(session, request.token, request.new_password)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token"
+        )
+
+    return {"message": "Password reset successfully"}
+
+
+# Better Auth compatible endpoints
+@auth_router.get("/auth/get-session")
+def get_session(request: Request, current_user: User = Depends(auth_handler.get_current_user)):
+    """Better Auth compatible session endpoint"""
+    # Calculate expiration time
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+
+    # Return session and user data in Better Auth format
+    session_data = {
+        "accessToken": request.headers.get("authorization", "").replace("Bearer ", ""),
+        "expiresAt": expires_at.isoformat() + "Z",  # ISO format with Z suffix for UTC
+        "user": {
+            "id": str(current_user.id),
+            "email": current_user.email,
+            "firstName": current_user.first_name,
+            "lastName": current_user.last_name
+        }
+    }
+
+    return {
+        "session": session_data,
+        "user": session_data["user"]
+    }

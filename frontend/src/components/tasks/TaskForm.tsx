@@ -1,191 +1,184 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { Task } from '../../lib/types';
+import React, { useState, useEffect } from 'react';
+import { Task, CreateTaskData, UpdateTaskData } from '@/lib/api';
+import { createTask, updateTask } from '@/lib/api';
 
 interface TaskFormProps {
-  onSuccess?: (task: Task) => void;
-  onCancel?: () => void;
-  initialData?: Partial<Task>;
+  task?: Task | null;
+  onClose: () => void;
+  onTaskSaved: () => void;
 }
 
-export default function TaskForm({ onSuccess, onCancel, initialData }: TaskFormProps) {
-  const { api } = useAuth();
-  const [formData, setFormData] = useState({
-    title: initialData?.title || '',
-    description: initialData?.description || '',
-    status: initialData?.status || 'pending' as const,
-    priority: initialData?.priority || 'medium' as const,
-    due_date: initialData?.due_date || '',
+interface FormData {
+  title: string;
+  description: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
+
+interface FormErrors {
+  title?: string;
+}
+
+const TaskForm = ({ task, onClose, onTaskSaved }: TaskFormProps) => {
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    description: '',
+    priority: 'Medium'
   });
+  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority
+      });
+    }
+  }, [task]);
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required';
+    } else if (formData.title.length > 200) {
+      newErrors.title = 'Title must be less than 200 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Clear error for this field when user types
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof FormErrors];
+        return newErrors;
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim()) {
-      setError('Title is required');
+    if (!validateForm()) {
       return;
     }
 
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(null);
 
-      let response;
-      if (initialData?.id) {
+    try {
+      if (task) {
         // Update existing task
-        response = await api.put<Task>(`/tasks/${initialData.id}`, formData);
+        await updateTask(task.id, formData as UpdateTaskData);
       } else {
         // Create new task
-        response = await api.post<Task>('/tasks', formData);
+        await createTask(formData as CreateTaskData);
       }
 
-      if (onSuccess) {
-        onSuccess(response);
-      }
-
-      // Reset form after successful submission
-      if (!initialData?.id) {
-        setFormData({
-          title: '',
-          description: '',
-          status: 'pending',
-          priority: 'medium',
-          due_date: '',
-        });
-      }
-    } catch (err) {
-      console.error('Error saving task:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save task');
+      onTaskSaved();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save task');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Clear error when user starts typing
-    if (error) {
-      setError('');
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">
-          {error}
-        </div>
-      )}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-medium mb-4">{task ? 'Edit Task' : 'Create New Task'}</h3>
 
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-          Title *
-        </label>
-        <input
-          type="text"
-          id="title"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Enter task title"
-          required
-        />
-      </div>
-
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Enter task description..."
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
-            Priority
-          </label>
-          <select
-            id="priority"
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
-          Due Date
-        </label>
-        <input
-          type="date"
-          id="due_date"
-          name="due_date"
-          value={formData.due_date}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <div className="flex justify-end space-x-3 pt-2">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-          >
-            Cancel
-          </button>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+            {error}
+          </div>
         )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
-        >
-          {loading ? (initialData?.id ? 'Updating...' : 'Creating...') : (initialData?.id ? 'Update Task' : 'Create Task')}
-        </button>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border ${
+                errors.title ? 'border-red-500' : 'border-gray-300'
+              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+              Priority
+            </label>
+            <select
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`px-4 py-2 rounded-md text-white ${
+                loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+            >
+              {loading ? (task ? 'Updating...' : 'Creating...') : task ? 'Update Task' : 'Create Task'}
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
-}
+};
+
+export default TaskForm;

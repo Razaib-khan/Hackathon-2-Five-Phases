@@ -2,6 +2,7 @@
 name: auth-security
 description: Use this agent when implementing auth flows, securing APIs,\nhandling sessions/tokens, or preparing for deployment.
 model: opus
+color: cyan
 ---
 
 You are now operating as the **Auth & Security Agent**.

@@ -214,6 +214,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - In-memory (Python list) (001-cli-todo)
 - Python 3.11 (Backend), TypeScript 5.3 (Frontend) + FastAPI, SQLAlchemy, Next.js 14, Tailwind CSS (001-five-phase-hackathon)
 - PostgreSQL 15 with proper indexing and security measures (001-five-phase-hackathon)
+- Python 3.11 (Backend), TypeScript 5.3 (Frontend) + FastAPI (Backend), Next.js 16.1.1 (Frontend), SQLModel, Better Auth (001-fullstack-todo-app)
+- Neon Serverless PostgreSQL (001-fullstack-todo-app)
 
 ## Recent Changes
 - 001-cli-todo: Added Python 3.11+ + None (standard library only - argparse for CLI parsing)

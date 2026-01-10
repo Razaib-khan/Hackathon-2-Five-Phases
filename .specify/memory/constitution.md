@@ -1,9 +1,9 @@
 <!--
-Sync Impact Report (2025-12-26):
-Version: 0.0.0 → 1.0.0
-Change Type: MAJOR (Initial ratification)
-Modified Principles: N/A (Initial creation)
-Added Sections: All sections (initial creation)
+Sync Impact Report (2026-01-10):
+Version: 1.0.0 → 1.1.0
+Change Type: MINOR (Added new principle)
+Modified Principles: N/A
+Added Sections: VII. Mandatory Use of Sub-Agents, Skills, and MCP Servers
 Removed Sections: None
 Templates Status:
   ✅ spec-template.md: Aligned (prioritized user stories match constitution)
@@ -83,7 +83,18 @@ Follow-up TODOs: None
 
 **Rationale**: Tool-based interactions are auditable, testable, and reproducible. They create clear boundaries and prevent "magic" behavior.
 
-### VII. Discourage Manual Coding
+### VII. Mandatory Use of Sub-Agents, Skills, and MCP Servers
+
+**The use of sub-agents, skills, and MCP servers is mandatory.** All development tasks MUST leverage these capabilities:
+- Sub-agents for complex multi-step operations and specialized tasks
+- Skills for domain-specific functionality and best practices
+- MCP servers for external service integration and enhanced capabilities
+
+**AI agents MUST NOT bypass these tools when they are available and applicable.** Development workflows should prioritize using existing sub-agents, skills, and MCP server integrations before resorting to alternative approaches.
+
+**Rationale**: Sub-agents, skills, and MCP servers provide standardized, tested, and optimized approaches to common development tasks. Using these tools ensures consistency, reduces errors, and leverages specialized functionality.
+
+### VIII. Discourage Manual Coding
 
 **Specifications drive automated implementation.** Manual coding should be minimized in favor of:
 - Code generation from specifications
@@ -97,7 +108,7 @@ Follow-up TODOs: None
 
 **Rationale**: Manual coding introduces inconsistency and is error-prone. Automation ensures adherence to standards and accelerates delivery.
 
-### VIII. Process Clarity Over UI Polish
+### IX. Process Clarity Over UI Polish
 
 **Internal processes and traceability are prioritized over user interface refinement.** Development efforts should focus on:
 - Clear documentation and specifications
@@ -109,20 +120,12 @@ Follow-up TODOs: None
 
 **Rationale**: For development tooling and internal systems, clarity and correctness matter more than appearance. Polish can be added later once core functionality is validated.
 
-### IX. Reusable Intelligence Artifacts
+### X. Reusable Intelligence Artifacts
 
 **Create intelligence artifacts when they provide lasting value.** Artifacts include:
 - **Prompt History Records (PHRs)**: Document all user prompts and agent responses
 - **Architecture Decision Records (ADRs)**: Capture significant architectural choices
 - **Reusable Intelligence (RI)**: Codified patterns, templates, and knowledge
-
-**Artifacts MUST be:**
-- Stored in standardized locations (`history/prompts/`, `history/adr/`, `intelligence/`)
-- Created automatically where possible (PHRs)
-- Suggested intelligently (ADRs for significant decisions)
-- Linked to relevant features and specifications
-
-**Rationale**: Intelligence artifacts enable learning, consistency, and knowledge transfer. They prevent repeated mistakes and accelerate future development.
 
 ## Development Workflow
 
@@ -197,4 +200,4 @@ Follow-up TODOs: None
 
 **Runtime development guidance** is provided in `CLAUDE.md` for AI agents and `.specify/templates/` for artifact structure.
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-26 | **Last Amended**: 2025-12-26
+**Version**: 1.1.0 | **Ratified**: 2025-12-26 | **Last Amended**: 2026-01-10

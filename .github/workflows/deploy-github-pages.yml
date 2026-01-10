@@ -27,7 +27,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -42,13 +42,42 @@ jobs:
         working-directory: ./frontend
         env:
           GITHUB_PAGES: 'true'
-          NEXT_PUBLIC_API_URL: 'https://razaib123-aido-todo-api.hf.space'
-        run: npm run build
+          NODE_ENV: 'production'
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://razaib123-aido-todo-api.hf.space' }}
+        run: |
+          # Create next.config.js for GitHub Pages export
+          cat > next.config.ts << 'EOF'
+          /** @type {import('next').NextConfig} */
+          const nextConfig = {
+            output: 'export',
+            trailingSlash: true,
+            images: {
+              unoptimized: true,
+            },
+            basePath: '',
+            assetPrefix: '',
+            env: {
+              NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+            },
+          };
+
+          export default nextConfig;
+          EOF
+
+          npm run build
+
+          # Move the built files to the correct location for GitHub Pages
+          if [ -d "out" ]; then
+            mv out ../out
+          else
+            echo "Build failed: 'out' directory not found"
+            exit 1
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./frontend/out
+          path: ./out
 
   deploy:
     environment:

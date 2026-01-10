@@ -16,6 +16,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy Backend to Hugging Face
+    environment: production  # Use environment for secrets management
 
     steps:
       - name: Checkout code
@@ -23,14 +24,84 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Deploy to Hugging Face
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git remote add huggingface https://oauth2:${{ secrets.HUGGINGFACE_TOKEN }}@huggingface.co/spaces/${{ secrets.HUGGINGFACE_USERNAME }}/aido-todo-api.git
-          git push -f huggingface main:main
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
+
+      - name: Verify Hugging Face token
+        run: |
+          if [ -z "${{ secrets.HUGGINGFACE_TOKEN }}" ]; then
+            echo "Error: HUGGINGFACE_TOKEN is not set"
+            exit 1
+          fi
+
+      - name: Deploy to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+        run: |
+          # Configure git for Hugging Face
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # Clone the Hugging Face Space repository
+          HF_SPACE_URL="https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${{ secrets.HUGGINGFACE_USERNAME }}/aido-todo-api"
+          git clone $HF_SPACE_URL hf-space
+
+          # Copy all necessary files to the HF space directory
+          cp -r backend/src hf-space/backend/
+          cp -r backend/tests hf-space/backend/  # Include tests for CI/CD
+          cp -r backend/requirements.txt hf-space/
+          cp -r backend/pyproject.toml hf-space/
+          cp -r backend/alembic* hf-space/backend/  # Include alembic migrations
+          cp -r Dockerfile hf-space/
+          cp -r README.md hf-space/
+
+          # Copy root requirements.txt if it's different from backend requirements
+          if [ -f "requirements.txt" ]; then
+            cp requirements.txt hf-space/
+          fi
+
+          # Copy any config files
+          if [ -f "backend/.env" ]; then
+            cp backend/.env hf-space/backend/
+          fi
+
+          # Commit and push to Hugging Face
+          cd hf-space
+          git add .
+          git status  # Show what files are being added
+
+          if ! git diff --staged --quiet; then
+            git commit -m "Update from GitHub Actions [skip ci]"
+            git push origin main
+            echo "✅ Backend deployed to Hugging Face Spaces"
+          else
+            echo "ℹ️ No changes to deploy"
+          fi
+
+      - name: Verify deployment
+        run: |
+          # Wait a bit for the deployment to take effect
+          sleep 30
+
+          # Try to check if the API is responding
+          API_URL="https://razaib123-aido-todo-api.hf.space"
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" $API_URL)
+
+          if [ $HTTP_CODE -eq 200 ] || [ $HTTP_CODE -eq 404 ]; then
+            echo "✅ API is responding (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ API might not be responding properly (HTTP $HTTP_CODE)"
+          fi
 
       - name: Deployment summary
         run: |
           echo "✅ Backend deployed to Hugging Face Spaces"
           echo "URL: https://huggingface.co/spaces/${{ secrets.HUGGINGFACE_USERNAME }}/aido-todo-api"
+          echo "API Endpoint: https://razaib123-aido-todo-api.hf.space"

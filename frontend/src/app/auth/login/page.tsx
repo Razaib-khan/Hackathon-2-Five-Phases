@@ -1,33 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 
-export default function LoginPage() {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+interface FormData {
+  email: string;
+  password: string;
+}
 
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
+
+const LoginPage = () => {
+  const [formData, setFormData] = useState<FormData>({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const router = useRouter();
-  const { login } = useAuth();
+  const { signIn } = useAuth(); // Updated to use signIn from Better Auth
+
+  const validateField = (name: keyof FormData, value: string): string | undefined => {
+    switch (name) {
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) return 'Please enter a valid email address';
+        break;
+      case 'password':
+        if (!value) return 'Password is required';
+        if (value.length < 6) return 'Password must be at least 6 characters';
+        break;
+      default:
+        break;
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    Object.entries(formData).forEach(([key, value]) => {
+      const error = validateField(key as keyof FormData, value);
+      if (error) {
+        newErrors[key as keyof FormData] = error;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
 
-    // Clear error when user starts typing
-    if (errors[name]) {
+    // Clear error for this field when user types
+    if (errors[name as keyof FormErrors]) {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors[name];
+        delete newErrors[name as keyof FormErrors];
         return newErrors;
       });
     }
@@ -35,111 +72,121 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+
+    // Clear previous errors
     setErrors({});
+    setGlobalError(null);
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      await login({
-        username: formData.username,
-        password: formData.password,
-      });
+      // Using Better Auth for login
+      await signIn(formData.email, formData.password);
 
-      // Redirect to dashboard after successful login
+      // Redirect to dashboard
       router.push('/dashboard');
-    } catch (error: any) {
-      setErrors({
-        general: error.message || 'Login failed. Please check your credentials.'
-      });
+      router.refresh();
+    } catch (err: any) {
+      setGlobalError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to AIDO</h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Manage your tasks efficiently and boost productivity
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
+          <p className="mt-2 text-gray-600">Sign in to your AIDO account</p>
         </div>
 
-        <div className="bg-white p-6 sm:p-8 rounded-lg shadow-md border border-gray-200">
-          {errors.general && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-              {errors.general}
-            </div>
-          )}
+        {globalError && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+            {globalError}
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Username or Email *
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email
               </label>
               <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
-                required
-                className={`w-full px-3 py-2 border rounded-md ${
-                  errors.username ? 'border-red-500' : 'border-gray-300'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                disabled={isLoading}
-                aria-describedby={errors.username ? "username-error" : undefined}
+                className={`w-full px-4 py-3 border ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+                placeholder="Enter your email"
               />
-              {errors.username && (
-                <p id="username-error" className="mt-1 text-sm text-red-600">
-                  {errors.username}
-                </p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
 
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
-              </label>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Link href="/auth/forgot-password" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={isLoading}
-                aria-describedby="password-help"
+                className={`w-full px-4 py-3 border ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+                placeholder="Enter your password"
               />
-              <p id="password-help" className="mt-1 text-xs text-gray-500">Enter your password</p>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
+          </div>
 
+          <div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              aria-busy={isLoading}
+              disabled={loading}
+              className={`w-full py-3 px-4 rounded-lg text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+              } transition duration-200`}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/auth/register" className="text-blue-600 hover:text-blue-800 font-medium">
-                Register
-              </Link>
-            </p>
           </div>
+        </form>
+
+        <div className="text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <Link href="/auth/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Sign up
+          </Link>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default LoginPage;

@@ -1,126 +1,179 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { Task } from '../../lib/types';
-import TaskCard from './TaskCard';
-import TaskFilter from './TaskFilter';
+import React, { useState, useEffect } from 'react';
+import { Task } from '@/lib/api';
+import { getTasks, updateTask, deleteTask } from '@/lib/api';
+import TaskForm from './TaskForm';
 
 interface TaskListProps {
-  initialTasks?: Task[];
+  onTaskUpdated?: () => void;
 }
 
-export default function TaskList({ initialTasks }: TaskListProps) {
-  const { api } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>(initialTasks || []);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>(initialTasks || []);
-  const [loading, setLoading] = useState(!initialTasks);
-  const [filters, setFilters] = useState({
-    status: 'all',
-    priority: 'all',
-    search: '',
-  });
+const TaskList = ({ onTaskUpdated }: TaskListProps) => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
-    if (!initialTasks) {
-      fetchTasks();
-    }
+    fetchTasks();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [tasks, filters]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await api.get<{ data: Task[] }>('/tasks');
-      setTasks(response.data);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
+      const tasksData = await getTasks();
+      setTasks(tasksData);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch tasks');
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let result = [...tasks];
-
-    // Apply status filter
-    if (filters.status !== 'all') {
-      result = result.filter(task => task.status === filters.status);
-    }
-
-    // Apply priority filter
-    if (filters.priority !== 'all') {
-      result = result.filter(task => task.priority === filters.priority);
-    }
-
-    // Apply search filter
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      result = result.filter(
-        task =>
-          task.title.toLowerCase().includes(searchTerm) ||
-          (task.description && task.description.toLowerCase().includes(searchTerm))
-      );
-    }
-
-    setFilteredTasks(result);
+  const handleTaskCreated = () => {
+    fetchTasks();
+    if (onTaskUpdated) onTaskUpdated();
   };
 
-  const handleFilterChange = (filterType: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterType]: value,
-    }));
+  const handleTaskUpdated = () => {
+    fetchTasks();
+    if (onTaskUpdated) onTaskUpdated();
   };
 
-  const handleTaskUpdate = (updatedTask: Task) => {
-    setTasks(prev => prev.map(task => (task.id === updatedTask.id ? updatedTask : task)));
+  const handleEdit = (task: Task) => {
+    setEditingTask(task);
+    setShowForm(true);
   };
 
-  const handleTaskDelete = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  const handleDelete = async (taskId: string) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask(taskId);
+        fetchTasks();
+        if (onTaskUpdated) onTaskUpdated();
+      } catch (err: any) {
+        setError(err.message || 'Failed to delete task');
+      }
+    }
+  };
+
+  const handleToggleComplete = async (task: Task) => {
+    try {
+      await updateTask(task.id, {
+        ...task,
+        completed: !task.completed
+      });
+      fetchTasks();
+      if (onTaskUpdated) onTaskUpdated();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update task');
+    }
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingTask(null);
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <div className="text-center py-4">Loading tasks...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-4 text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <TaskFilter
-        filters={filters}
-        onFilterChange={handleFilterChange}
-      />
+    <div className="mt-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Your Tasks</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Add New Task
+        </button>
+      </div>
 
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No tasks found</h3>
-          <p className="text-gray-500">Try changing your filters or create a new task</p>
+      {showForm && (
+        <TaskForm
+          task={editingTask}
+          onClose={handleCloseForm}
+          onTaskSaved={editingTask ? handleTaskUpdated : handleTaskCreated}
+        />
+      )}
+
+      {tasks.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>No tasks yet. Add your first task!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTasks.map(task => (
-            <TaskCard
+        <ul className="space-y-3">
+          {tasks.map((task) => (
+            <li
               key={task.id}
-              task={task}
-              onUpdate={handleTaskUpdate}
-              onDelete={handleTaskDelete}
-            />
+              className={`flex items-center justify-between p-4 border rounded-md ${
+                task.completed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+              }`}
+            >
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => handleToggleComplete(task)}
+                  className="mr-3 h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <div>
+                  <h3
+                    className={`font-medium ${
+                      task.completed ? 'line-through text-gray-500' : 'text-gray-900'
+                    }`}
+                  >
+                    {task.title}
+                  </h3>
+                  {task.description && (
+                    <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                  )}
+                  <div className="flex items-center mt-2">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        task.priority === 'High'
+                          ? 'bg-red-100 text-red-800'
+                          : task.priority === 'Medium'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500">
+                      {new Date(task.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleEdit(task)}
+                  className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(task.id)}
+                  className="text-red-600 hover:text-red-900 text-sm font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
-}
+};
+
+export default TaskList;

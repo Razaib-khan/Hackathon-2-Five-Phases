@@ -1,0 +1,172 @@
+openapi: 3.0.0
+info:
+  title: AIDO Tasks API
+  version: 1.0.0
+  description: API for task management in the AIDO todo application
+
+paths:
+  /tasks:
+    get:
+      summary: Get current user's tasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user's tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+    post:
+      summary: Create a new task
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - priority
+              properties:
+                title:
+                  type: string
+                  example: "Buy groceries"
+                description:
+                  type: string
+                  example: "Milk, eggs, bread"
+                priority:
+                  type: string
+                  enum: [High, Medium, Low]
+                  example: "Medium"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+
+  /tasks/{task_id}:
+    get:
+      summary: Get a specific task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found or not owned by user
+    put:
+      summary: Update a task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Buy groceries"
+                description:
+                  type: string
+                  example: "Milk, eggs, bread"
+                priority:
+                  type: string
+                  enum: [High, Medium, Low]
+                  example: "High"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+        '404':
+          description: Task not found or not owned by user
+    delete:
+      summary: Delete a task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Task deleted successfully
+        '404':
+          description: Task not found or not owned by user
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Buy groceries"
+        description:
+          type: string
+          example: "Milk, eggs, bread"
+        priority:
+          type: string
+          enum: [High, Medium, Low]
+          example: "Medium"
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - priority
+        - user_id
+        - created_at
+        - updated_at

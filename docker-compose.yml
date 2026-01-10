@@ -1,61 +1,65 @@
 version: '3.9'
 
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: aido-backend
-    ports:
-      - "7860:7860"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - API_HOST=0.0.0.0
-      - API_PORT=7860
-      - FRONTEND_URL=http://localhost:3000
-      - ENVIRONMENT=development
-    depends_on:
-      - db
-    volumes:
-      - ./backend/src:/app/src
-    command: uvicorn src.main:app --host 0.0.0.0 --port 7860 --reload
-    networks:
-      - aido-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:7860/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: aido-frontend
+    container_name: aido-frontend-dev
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:7860
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=development
     depends_on:
       - backend
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     command: npm run dev
     networks:
       - aido-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health || http://localhost:3000"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aido-backend-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/aido_dev
+      - JWT_SECRET=${JWT_SECRET:-default_secret_key_for_dev}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - FRONTEND_URL=http://localhost:3000
+      - ENVIRONMENT=development
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn src.api.main:create_app --host 0.0.0.0 --port 8000 --reload --factory
+    networks:
+      - aido-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health || http://localhost:8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   db:
     image: postgres:16-alpine
-    container_name: aido-db
+    container_name: aido-db-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -63,7 +67,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - aido-db-volume:/var/lib/postgresql/data
+      - aido-db-data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
     networks:
       - aido-network
     healthcheck:
@@ -71,9 +76,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
 volumes:
-  aido-db-volume:
+  aido-db-data:
     driver: local
 
 networks:

@@ -2,10 +2,20 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
+from pathlib import Path
+import sys
+import os
+from dotenv import load_dotenv
 
-# Import all models for autogenerate support
-from src.models.base import Base
-from src.models.user import User
+# Load environment variables from .env file
+load_dotenv()
+
+# Add the backend/src directory to the path so we can import our models
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
+# Import the database URL and models
+from src.database.database import database_url
+from src.models import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,14 +26,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-target_metadata = Base.metadata
+# Set the database URL
+config.set_main_option('sqlalchemy.url', database_url)
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Add our model's MetaData object here
+# for 'autogenerate' support
+target_metadata = SQLModel.metadata
 
 
 def run_migrations_offline() -> None:
@@ -58,7 +66,7 @@ def run_migrations_online() -> None:
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

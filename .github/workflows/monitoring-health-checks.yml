@@ -1,0 +1,178 @@
+name: Monitoring and Health Checks
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check-backend:
+    runs-on: ubuntu-latest
+    name: Health Check Backend API
+    timeout-minutes: 10
+
+    steps:
+      - name: Check Backend Health
+        run: |
+          BACKEND_URL="${{ secrets.BACKEND_HEALTH_CHECK_URL || 'https://razaib123-aido-todo-api.hf.space' }}"
+
+          # Check if backend is responding
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$BACKEND_URL/")
+
+          if [ $HTTP_CODE -eq 200 ]; then
+            echo "✅ Backend API is healthy (HTTP $HTTP_CODE)"
+            echo "Health check passed at $(date)"
+          elif [ $HTTP_CODE -ge 400 ] && [ $HTTP_CODE -lt 500 ]; then
+            echo "⚠️ Backend API is reachable but returning client error (HTTP $HTTP_CODE)"
+            echo "Health check partially passed at $(date)"
+          else
+            echo "❌ Backend API is unhealthy (HTTP $HTTP_CODE)"
+            echo "Health check failed at $(date)"
+            exit 1
+          fi
+
+      - name: Check API Endpoints
+        run: |
+          BACKEND_URL="${{ secrets.BACKEND_HEALTH_CHECK_URL || 'https://razaib123-aido-todo-api.hf.space' }}"
+
+          # Check /docs endpoint
+          DOCS_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$BACKEND_URL/docs")
+          if [ $DOCS_CODE -eq 200 ]; then
+            echo "✅ API docs endpoint is accessible (HTTP $DOCS_CODE)"
+          else
+            echo "❌ API docs endpoint is not accessible (HTTP $DOCS_CODE)"
+          fi
+
+          # Check /health endpoint if available
+          HEALTH_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$BACKEND_URL/health" || echo "404")
+          if [ $HEALTH_CODE -eq 200 ]; then
+            echo "✅ Health endpoint is accessible (HTTP $HEALTH_CODE)"
+          else
+            echo "ℹ️ Health endpoint not available (HTTP $HEALTH_CODE)"
+          fi
+
+  health-check-frontend:
+    runs-on: ubuntu-latest
+    name: Health Check Frontend
+    timeout-minutes: 10
+
+    steps:
+      - name: Check Frontend Health
+        run: |
+          FRONTEND_URL="${{ secrets.FRONTEND_HEALTH_CHECK_URL || github.event.repository.html_url }}"
+
+          # For GitHub Pages, construct the URL from repository info
+          if [ -z "$FRONTEND_URL" ] || [[ "$FRONTEND_URL" == *"github.com"* ]]; then
+            REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+            OWNER_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+            FRONTEND_URL="https://$OWNER_NAME.github.io/$REPO_NAME"
+          fi
+
+          HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$FRONTEND_URL/")
+
+          if [ $HTTP_CODE -eq 200 ]; then
+            echo "✅ Frontend is healthy (HTTP $HTTP_CODE)"
+            echo "Frontend URL: $FRONTEND_URL"
+          elif [ $HTTP_CODE -ge 400 ] && [ $HTTP_CODE -lt 500 ]; then
+            echo "⚠️ Frontend is reachable but returning client error (HTTP $HTTP_CODE)"
+            echo "Frontend URL: $FRONTEND_URL"
+          else
+            echo "❌ Frontend is unhealthy (HTTP $HTTP_CODE)"
+            echo "Frontend URL: $FRONTEND_URL"
+            exit 1
+          fi
+
+  uptime-monitoring:
+    runs-on: ubuntu-latest
+    name: Uptime Monitoring
+    timeout-minutes: 10
+
+    steps:
+      - name: Check Service Uptime
+        run: |
+          BACKEND_URL="${{ secrets.BACKEND_HEALTH_CHECK_URL || 'https://razaib123-aido-todo-api.hf.space' }}"
+          FRONTEND_URL="${{ secrets.FRONTEND_HEALTH_CHECK_URL || github.event.repository.html_url }}"
+
+          if [[ "$FRONTEND_URL" == *"github.com"* ]]; then
+            REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+            OWNER_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+            FRONTEND_URL="https://$OWNER_NAME.github.io/$REPO_NAME"
+          fi
+
+          # Backend response time
+          BACKEND_TIME=$(curl -o /dev/null -s -w "%{time_total}s" --connect-timeout 10 "$BACKEND_URL/" 2>/dev/null || echo "timeout")
+          if [[ $BACKEND_TIME != "timeout" ]]; then
+            echo "Backend response time: $BACKEND_TIME"
+
+            # Alert if response time is too slow (>2 seconds)
+            if (( $(echo "$BACKEND_TIME > 2" | bc -l) )); then
+              echo "⚠️ Backend response time is slow: $BACKEND_TIME seconds"
+            else
+              echo "✅ Backend response time is acceptable: $BACKEND_TIME seconds"
+            fi
+          else
+            echo "❌ Backend is not responding (timeout)"
+          fi
+
+          # Frontend response time
+          FRONTEND_TIME=$(curl -o /dev/null -s -w "%{time_total}s" --connect-timeout 10 "$FRONTEND_URL/" 2>/dev/null || echo "timeout")
+          if [[ $FRONTEND_TIME != "timeout" ]]; then
+            echo "Frontend response time: $FRONTEND_TIME seconds"
+
+            # Alert if response time is too slow (>3 seconds)
+            if (( $(echo "$FRONTEND_TIME > 3" | bc -l) )); then
+              echo "⚠️ Frontend response time is slow: $FRONTEND_TIME seconds"
+            else
+              echo "✅ Frontend response time is acceptable: $FRONTEND_TIME seconds"
+            fi
+          else
+            echo "❌ Frontend is not responding (timeout)"
+          fi
+
+  alert-on-failure:
+    runs-on: ubuntu-latest
+    name: Alert on Health Check Failure
+    if: ${{ failure() }}
+    needs: [health-check-backend, health-check-frontend, uptime-monitoring]
+
+    steps:
+      - name: Send Alert
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#alerts'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          text: ':warning: Health check failed for AIDO application!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  create-incident-ticket:
+    runs-on: ubuntu-latest
+    name: Create Incident Ticket
+    if: ${{ failure() }}
+    needs: [health-check-backend, health-check-frontend, uptime-monitoring]
+
+    steps:
+      - name: Create Incident Ticket
+        if: ${{ secrets.GITHUB_TOKEN != '' }}
+        uses: dacbd/create-issue-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: '[Incident] AIDO Application Health Check Failed'
+          body: |
+            Health check monitoring detected issues with the AIDO application.
+
+            - Timestamp: $(date)
+            - Workflow: ${{ github.workflow }}
+            - Repository: ${{ github.repository }}
+
+            Please investigate the following:
+            - Backend API health
+            - Frontend availability
+            - Response times
+            - Error logs
+
+            Assign to on-call team for immediate attention.
+          labels: 'incident,high-priority,automated'

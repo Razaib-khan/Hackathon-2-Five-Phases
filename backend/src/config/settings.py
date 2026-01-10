@@ -1,43 +1,41 @@
 from pydantic_settings import BaseSettings
-from typing import List, Optional
+from typing import Optional
+import os
 
 
 class Settings(BaseSettings):
     # Database settings
-    DATABASE_URL: str = "postgresql://localhost/aido_todo"
-    TEST_DATABASE_URL: str = "postgresql://localhost/aido_todo_test"
+    database_host: str = os.getenv("DATABASE_HOST", "localhost")
+    database_port: int = int(os.getenv("DATABASE_PORT", "5432"))
+    database_name: str = os.getenv("DATABASE_NAME", "aido_db")
+    database_username: str = os.getenv("DATABASE_USERNAME", "postgres")
+    database_password: str = os.getenv("DATABASE_PASSWORD", "")
+    database_echo: bool = os.getenv("DATABASE_ECHO", "False").lower() == "true"
 
-    # JWT settings
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-
-    # Better Auth settings (removed OAuth)
-    VERIFICATION_CODE_LENGTH: int = 6
-    VERIFICATION_CODE_EXPIRY_MINUTES: int = 10
+    # Auth settings
+    secret_key: str = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production")
+    algorithm: str = os.getenv("ALGORITHM", "HS256")
+    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    refresh_token_expire_days: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
     # Email settings
-    EMAIL_HOST: Optional[str] = None
-    EMAIL_PORT: int = 587
-    EMAIL_USERNAME: Optional[str] = None
-    EMAIL_PASSWORD: Optional[str] = None
-    EMAIL_FROM: str = "noreply@aido-todo.com"
+    smtp_server: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username: str = os.getenv("SMTP_USERNAME", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    email_from: str = os.getenv("EMAIL_FROM", "noreply@aidoapp.com")
 
-    # Cloud storage settings
-    CLOUD_STORAGE_BUCKET: Optional[str] = None
-    CLOUD_STORAGE_REGION: Optional[str] = None
+    # App settings
+    app_name: str = os.getenv("APP_NAME", "AIDO Todo App")
+    app_version: str = os.getenv("APP_VERSION", "1.0.0")
+    debug: bool = os.getenv("DEBUG", "False").lower() == "true"
 
-    # Security settings
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+    # CORS settings
+    allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 
-    # Application settings
-    DEBUG: bool = True
-    API_V1_STR: str = "/api/v1"
-    FRONTEND_URL: str = "http://localhost:3000"
-
-    class Config:
-        env_file = ".env"
+    # Better Auth settings
+    better_auth_secret: str = os.getenv("BETTER_AUTH_SECRET", "your-better-auth-secret")
+    base_url: str = os.getenv("BASE_URL", "http://localhost:8000")
 
 
 settings = Settings()

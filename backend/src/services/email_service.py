@@ -2,276 +2,120 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
-from pydantic import EmailStr
-from fastapi import HTTPException, status
+from ..config.settings import settings
+from ..utils.errors import EmailServiceException
 import logging
 
-from ..config.settings import settings
-
-
-logger = logging.getLogger(__name__)
+# Set up logging
+logger = logging.getLogger("aido_app")
 
 
 class EmailService:
-    @staticmethod
-    def send_email(to_email: EmailStr, subject: str, body: str, html_body: Optional[str] = None):
-        """
-        Send an email using SMTP
-        """
-        if not settings.EMAIL_HOST:
-            logger.warning("Email host not configured, skipping email sending")
-            return
+    def __init__(self):
+        self.smtp_server = settings.smtp_server
+        self.smtp_port = settings.smtp_port
+        self.username = settings.smtp_username
+        self.password = settings.smtp_password
+        self.sender_email = settings.email_from
 
+    def send_email(self, recipient_email: str, subject: str, body: str, html_body: Optional[str] = None):
+        """
+        Send an email to the specified recipient
+        """
         try:
             # Create message
-            msg = MIMEMultipart()
-            msg['From'] = settings.EMAIL_FROM
-            msg['To'] = to_email
-            msg['Subject'] = subject
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = self.sender_email
+            msg["To"] = recipient_email
 
-            # Add body to email
+            # Create text and HTML parts
+            text_part = MIMEText(body, "plain")
+            msg.attach(text_part)
+
             if html_body:
-                msg.attach(MIMEText(body, 'plain'))
-                msg.attach(MIMEText(html_body, 'html'))
-            else:
-                msg.attach(MIMEText(body, 'plain'))
+                html_part = MIMEText(html_body, "html")
+                msg.attach(html_part)
 
-            # Create SMTP session
-            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-            server.starttls()  # Enable security
-            server.login(settings.EMAIL_USERNAME, settings.EMAIL_PASSWORD)
+            # Connect to server and send email
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()  # Enable encryption
+                server.login(self.username, self.password)
+                server.sendmail(self.sender_email, recipient_email, msg.as_string())
 
-            # Send email
-            text = msg.as_string()
-            server.sendmail(settings.EMAIL_FROM, to_email, text)
-            server.quit()
-
-            logger.info(f"Email sent successfully to {to_email}")
-
+            logger.info(f"Email sent successfully to {recipient_email}")
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send email"
-            )
+            logger.error(f"Failed to send email to {recipient_email}: {str(e)}")
+            raise EmailServiceException(f"Failed to send email: {str(e)}")
 
-    @staticmethod
-    def send_confirmation_email(to_email: EmailStr, username: str, confirmation_token: str):
+    def send_password_reset_email(self, recipient_email: str, reset_link: str):
         """
-        Send account confirmation email
+        Send a password reset email to the user
         """
-        subject = "Confirm Your Account - Five Phase Hackathon Platform"
+        subject = "AIDO - Password Reset Request"
+        body = f"""Hi there,
 
-        body = f"""
-        Hello {username},
+We received a request to reset your AIDO account password.
 
-        Thank you for registering with the Five Phase Hackathon Platform!
+Click the link below to reset your password:
+{reset_link}
 
-        Please click the link below to confirm your email address:
-        {settings.FRONTEND_URL}/confirm-email?token={confirmation_token}
+The link will expire in 10 minutes for security reasons.
 
-        If you did not create an account, please ignore this email.
+If you didn't request this, please ignore this email.
 
-        Best regards,
-        The Five Phase Hackathon Team
+Best regards,
+The AIDO Team"""
+
+        html_body = f"""<html>
+<body>
+<p>Hi there,</p>
+
+<p>We received a request to reset your AIDO account password.</p>
+
+<p>Click the link below to reset your password:</p>
+<p><a href="{reset_link}">Reset Password</a></p>
+
+<p><em>The link will expire in 10 minutes for security reasons.</em></p>
+
+<p>If you didn't request this, please ignore this email.</p>
+
+<p>Best regards,<br>
+The AIDO Team</p>
+</body>
+</html>"""
+
+        self.send_email(recipient_email, subject, body, html_body)
+
+    def send_welcome_email(self, recipient_email: str, first_name: str):
         """
-
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Welcome to Five Phase Hackathon Platform!</h2>
-            <p>Hello {username},</p>
-            <p>Thank you for registering with the Five Phase Hackathon Platform!</p>
-            <p>Please click the button below to confirm your email address:</p>
-            <a href="{settings.FRONTEND_URL}/confirm-email?token={confirmation_token}"
-               style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">
-               Confirm Email Address
-            </a>
-            <p>If you did not create an account, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Five Phase Hackathon Team</p>
-        </body>
-        </html>
+        Send a welcome email to a new user
         """
+        subject = "Welcome to AIDO!"
+        body = f"""Hi {first_name},
 
-        EmailService.send_email(to_email, subject, body, html_body)
+Welcome to AIDO! We're excited to have you on board.
 
-    @staticmethod
-    def send_welcome_email(to_email: EmailStr, username: str):
-        """
-        Send welcome email after account confirmation
-        """
-        subject = "Welcome to Five Phase Hackathon Platform!"
+Get started by creating your first task and organizing your life.
 
-        body = f"""
-        Hello {username},
+Best regards,
+The AIDO Team"""
 
-        Welcome to the Five Phase Hackathon Platform! Your account has been confirmed.
+        html_body = f"""<html>
+<body>
+<p>Hi {first_name},</p>
 
-        You can now:
-        - Join hackathons
-        - Create or join teams
-        - Submit projects
-        - Participate in judging
+<p>Welcome to AIDO! We're excited to have you on board.</p>
 
-        Start by visiting your dashboard: {settings.FRONTEND_URL}/dashboard
+<p>Get started by creating your first task and organizing your life.</p>
 
-        Best regards,
-        The Five Phase Hackathon Team
-        """
+<p>Best regards,<br>
+The AIDO Team</p>
+</body>
+</html>"""
 
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Welcome to Five Phase Hackathon Platform!</h2>
-            <p>Hello {username},</p>
-            <p>Welcome to the Five Phase Hackathon Platform! Your account has been confirmed.</p>
-            <p>You can now:</p>
-            <ul>
-                <li>Join hackathons</li>
-                <li>Create or join teams</li>
-                <li>Submit projects</li>
-                <li>Participate in judging</li>
-            </ul>
-            <a href="{settings.FRONTEND_URL}/dashboard"
-               style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">
-               Visit Dashboard
-            </a>
-            <br><br>
-            <p>Best regards,<br>The Five Phase Hackathon Team</p>
-        </body>
-        </html>
-        """
+        self.send_email(recipient_email, subject, body, html_body)
 
-        EmailService.send_email(to_email, subject, body, html_body)
 
-    @staticmethod
-    def send_verification_code_email(to_email: EmailStr, username: str, verification_code: str):
-        """
-        Send verification code email for registration
-        """
-        subject = "Verify Your Email Address - Five Phase Hackathon Platform"
-
-        body = f"""
-        Hello {username},
-
-        Thank you for registering with the Five Phase Hackathon Platform!
-
-        Your verification code is: {verification_code}
-
-        Please enter this code in the app to verify your email address and complete registration.
-
-        The code will expire in 10 minutes.
-
-        If you did not create an account, please ignore this email.
-
-        Best regards,
-        The Five Phase Hackathon Team
-        """
-
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Verify Your Email Address</h2>
-            <p>Hello {username},</p>
-            <p>Thank you for registering with the Five Phase Hackathon Platform!</p>
-            <p>Your verification code is:</p>
-            <div style="font-size: 24px; font-weight: bold; margin: 20px 0; padding: 10px; background-color: #f3f4f6; text-align: center; border-radius: 5px;">
-                {verification_code}
-            </div>
-            <p>Please enter this code in the app to verify your email address and complete registration.</p>
-            <p><strong>The code will expire in 10 minutes.</strong></p>
-            <p>If you did not create an account, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Five Phase Hackathon Team</p>
-        </body>
-        </html>
-        """
-
-        EmailService.send_email(to_email, subject, body, html_body)
-
-    @staticmethod
-    def send_login_verification_code_email(to_email: EmailStr, username: str, verification_code: str):
-        """
-        Send verification code email for login
-        """
-        subject = "Login Verification Code - Five Phase Hackathon Platform"
-
-        body = f"""
-        Hello {username},
-
-        You have requested to log in to the Five Phase Hackathon Platform.
-
-        Your verification code is: {verification_code}
-
-        Please enter this code in the app to complete the login process.
-
-        The code will expire in 10 minutes.
-
-        If you did not request to log in, please ignore this email.
-
-        Best regards,
-        The Five Phase Hackathon Team
-        """
-
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Login Verification</h2>
-            <p>Hello {username},</p>
-            <p>You have requested to log in to the Five Phase Hackathon Platform.</p>
-            <p>Your verification code is:</p>
-            <div style="font-size: 24px; font-weight: bold; margin: 20px 0; padding: 10px; background-color: #f3f4f6; text-align: center; border-radius: 5px;">
-                {verification_code}
-            </div>
-            <p>Please enter this code in the app to complete the login process.</p>
-            <p><strong>The code will expire in 10 minutes.</strong></p>
-            <p>If you did not request to log in, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Five Phase Hackathon Team</p>
-        </body>
-        </html>
-        """
-
-        EmailService.send_email(to_email, subject, body, html_body)
-
-    @staticmethod
-    def send_password_reset_email(to_email: EmailStr, username: str, reset_token: str):
-        """
-        Send password reset email
-        """
-        subject = "Reset Your Password - Five Phase Hackathon Platform"
-
-        body = f"""
-        Hello {username},
-
-        You have requested to reset your password for the Five Phase Hackathon Platform.
-
-        Click the link below to reset your password:
-        {settings.FRONTEND_URL}/reset-password?token={reset_token}
-
-        If you did not request this, please ignore this email.
-
-        Best regards,
-        The Five Phase Hackathon Team
-        """
-
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Reset Your Password</h2>
-            <p>Hello {username},</p>
-            <p>You have requested to reset your password for the Five Phase Hackathon Platform.</p>
-            <p>Click the button below to reset your password:</p>
-            <a href="{settings.FRONTEND_URL}/reset-password?token={reset_token}"
-               style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">
-               Reset Password
-            </a>
-            <p>If you did not request this, please ignore this email.</p>
-            <br>
-            <p>Best regards,<br>The Five Phase Hackathon Team</p>
-        </body>
-        </html>
-        """
-
-        EmailService.send_email(to_email, subject, body, html_body)
+# Global instance of EmailService
+email_service = EmailService()

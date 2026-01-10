@@ -1,71 +1,105 @@
 'use client';
 
-import { useAuth } from '../hooks/useAuth';
+import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
-export default function HomePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+export default function Home() {
+  const { session, isLoading } = useAuth();
+  const [redirected, setRedirected] = useState(false);
 
-  if (isLoading) {
+  // Check if user is authenticated and redirect to dashboard if they are
+  useEffect(() => {
+    if (!isLoading && session && !redirected) {
+      setRedirected(true);
+      window.location.href = '/dashboard';
+    }
+  }, [session, isLoading, redirected]);
+
+  if (isLoading || (session && !redirected)) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p>Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Five Phase Hackathon Platform</h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Manage hackathons through all five phases: Registration, Ideation, Development, Submission, and Presentation/Judging
-        </p>
-
-        {!isAuthenticated ? (
-          <div className="space-x-4">
-            <Link
-              href="/auth/login"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200"
-            >
-              Login
-            </Link>
-            <Link
-              href="/auth/register"
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200"
-            >
-              Register
-            </Link>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 font-sans">
+      <main className="flex min-h-screen w-full max-w-4xl flex-col items-center justify-between py-16 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-8 text-center w-full">
+          {/* Logo Section */}
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg">
+              <Image
+                src="/AIDOlogo.svg"
+                alt="AIDO Logo"
+                width={80}
+                height={80}
+                className="rounded-lg"
+                priority
+              />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              AIDO
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-md">
+              Advanced Interactive Dashboard Organizer
+            </p>
           </div>
-        ) : (
-          <div>
-            <p className="text-lg mb-4">Welcome back, {user?.username}!</p>
-            <Link
-              href="/dashboard"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200"
-            >
-              Go to Dashboard
-            </Link>
+
+          {/* Hero Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-2xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">
+              Organize Your Tasks Efficiently
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+              AIDO is a comprehensive todo application with CRUD operations, priority management, and secure authentication. Manage your tasks with ease and focus on what matters most.
+            </p>
+
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-blue-50 dark:bg-gray-700 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Task Management</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Create, read, update, and delete tasks</p>
+              </div>
+              <div className="bg-green-50 dark:bg-gray-700 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Priority Levels</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Critical, high, medium, low priorities</p>
+              </div>
+              <div className="bg-purple-50 dark:bg-gray-700 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Secure Auth</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Email verification & secure login</p>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/auth/login"
+                className="flex h-12 w-full items-center justify-center rounded-full bg-indigo-600 px-6 text-white font-medium transition-colors hover:bg-indigo-700 md:w-auto"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth/register"
+                className="flex h-12 w-full items-center justify-center rounded-full border border-indigo-600 px-6 text-indigo-600 font-medium transition-colors hover:bg-indigo-50 dark:hover:bg-gray-700 dark:text-indigo-400 dark:border-indigo-400 md:w-auto"
+              >
+                Register
+              </Link>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <h2 className="text-xl font-semibold mb-3 text-gray-800">Registration</h2>
-          <p className="text-gray-600">Sign up and create your profile to participate in hackathons.</p>
+          {/* Footer Links */}
+          <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p>© {new Date().getFullYear()} AIDO - Advanced Interactive Dashboard Organizer</p>
+          </div>
         </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <h2 className="text-xl font-semibold mb-3 text-gray-800">Team Formation</h2>
-          <p className="text-gray-600">Create or join teams to collaborate on your hackathon projects.</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-          <h2 className="text-xl font-semibold mb-3 text-gray-800">Project Submission</h2>
-          <p className="text-gray-600">Submit your projects during the submission phase for evaluation.</p>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
