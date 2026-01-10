@@ -24,7 +24,7 @@ export default function NotificationList({ showBadge = true, className = '' }: N
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/notifications');
+      const response = await api.get<{ data: Notification[] }>('/notifications');
       setNotifications(response.data);
     } catch (error) {
       console.error('Error fetching notifications:', error);

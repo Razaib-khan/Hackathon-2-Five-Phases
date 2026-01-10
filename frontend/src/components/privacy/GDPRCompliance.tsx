@@ -22,16 +22,16 @@ export default function GDPRCompliance() {
 
   const fetchGdprInfo = async () => {
     try {
-      const rightsResponse = await api.get('/gdpr/rights-info');
+      const rightsResponse = await api.get<any>('/gdpr/rights-info');
       setGdprRights(rightsResponse.data);
 
-      const policyResponse = await api.get('/gdpr/privacy-policy');
+      const policyResponse = await api.get<any>('/gdpr/privacy-policy');
       setPrivacyPolicy(policyResponse.data);
 
-      const retentionResponse = await api.get('/gdpr/retention-info');
+      const retentionResponse = await api.get<any>('/gdpr/retention-info');
       setRetentionInfo(retentionResponse.data);
 
-      const requestsResponse = await api.get('/gdpr/requests');
+      const requestsResponse = await api.get<any>('/gdpr/requests');
       setGdprRequests(requestsResponse.data);
     } catch (error) {
       console.error('Error fetching GDPR info:', error);
@@ -41,7 +41,7 @@ export default function GDPRCompliance() {
   const handleDataExport = async () => {
     setDataExportLoading(true);
     try {
-      const response = await api.get('/gdpr/data-export');
+      const response = await api.get<any>('/gdpr/data-export');
 
       // Create a download link for the data
       const dataStr = JSON.stringify(response.data, null, 2);

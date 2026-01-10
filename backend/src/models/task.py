@@ -36,6 +36,9 @@ class Task(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_public = Column(Boolean, default=False)  # For sharing tasks
 
+    # Additional fields
+    project_id = Column(UUID(as_uuid=True), nullable=True)  # Store as raw UUID without FK constraint for now
+
     # Relationships
     created_by_user = relationship("User", back_populates="tasks", foreign_keys=[created_by])
     assigned_to_user = relationship("User", back_populates="assigned_tasks", foreign_keys=[assigned_to])

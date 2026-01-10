@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TaskPriority, TaskStatus } from '../../types';
+import { TaskPriority, TaskStatus } from '../../lib/types';
 
 interface AdvancedFilterPanelProps {
   filters: any;
@@ -156,6 +156,7 @@ const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
                 setShowSaveDialog(true);
               }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm"
+              disabled={!onSaveFilter}
             >
               Save Filter
             </button>
@@ -164,7 +165,7 @@ const AdvancedFilterPanel: React.FC<AdvancedFilterPanelProps> = ({
       </div>
 
       {/* Save filter dialog */}
-      {showSaveDialog && (
+      {showSaveDialog && onSaveFilter && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="relative bg-white rounded-lg shadow-xl p-6 max-w-md mx-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Save Filter</h3>

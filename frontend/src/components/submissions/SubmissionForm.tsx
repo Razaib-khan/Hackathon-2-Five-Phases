@@ -9,6 +9,13 @@ interface SubmissionFormProps {
   teamId: string;
 }
 
+// Define the ProgressEvent type for file uploads
+interface ProgressEvent extends Event {
+  lengthComputable: boolean;
+  loaded: number;
+  total: number;
+}
+
 export default function SubmissionForm({ hackathonId, teamId }: SubmissionFormProps) {
   const { api } = useAuth();
   const [title, setTitle] = useState('');
@@ -55,20 +62,15 @@ export default function SubmissionForm({ hackathonId, teamId }: SubmissionFormPr
       formData.append('file', files[i]);
 
       try {
-        const response = await api.post(`/submissions/${submissionId}/files`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 1)
-            );
-            const overallProgress = Math.round(((i / files.length) * 100) + (percentCompleted / files.length));
-            setProgress(overallProgress);
-          },
+        const response = await api.postFile(`/submissions/${submissionId}/files`, formData, (progressEvent: ProgressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+          );
+          const overallProgress = Math.round(((i / files.length) * 100) + (percentCompleted / files.length));
+          setProgress(overallProgress);
         });
 
-        uploadedFiles.push(response.data);
+        uploadedFiles.push(response);
       } catch (error) {
         console.error(`Error uploading file ${files[i].name}:`, error);
         throw error;
@@ -98,8 +100,8 @@ export default function SubmissionForm({ hackathonId, teamId }: SubmissionFormPr
         category,
       };
 
-      const response = await api.post('/submissions', submissionData);
-      const submissionId = response.data.id;
+      const response = await api.post<Submission>('/submissions', submissionData);
+      const submissionId = response.id;
 
       // Upload files if any
       if (files.length > 0) {

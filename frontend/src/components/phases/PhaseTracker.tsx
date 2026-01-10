@@ -28,13 +28,13 @@ export default function PhaseTracker({ hackathonId }: PhaseTrackerProps) {
       setLoading(true);
 
       // Fetch hackathon details with phases
-      const response = await api.get(`/hackathons/${hackathonId}`);
-      setHackathon(response.data);
+      const response = await api.get<HackathonWithPhases>(`/hackathons/${hackathonId}`);
+      setHackathon(response);
 
       // Fetch current active phase
-      const phaseResponse = await api.get(`/hackathons/${hackathonId}/current-phase`);
-      if (phaseResponse.data.current_phase) {
-        setCurrentPhase(phaseResponse.data.current_phase);
+      const phaseResponse = await api.get<{ current_phase: Phase | null }>(`/hackathons/${hackathonId}/current-phase`);
+      if (phaseResponse.current_phase) {
+        setCurrentPhase(phaseResponse.current_phase);
       }
     } catch (error) {
       console.error('Error fetching hackathon data:', error);
@@ -45,10 +45,10 @@ export default function PhaseTracker({ hackathonId }: PhaseTrackerProps) {
 
   // Calculate time remaining in current phase
   useEffect(() => {
-    if (!currentPhase?.end_date) return;
+    if (!currentPhase?.end_time) return;
 
     const calculateTimeLeft = () => {
-      const endTime = new Date(currentPhase.end_date).getTime();
+      const endTime = new Date(currentPhase.end_time).getTime();
       const now = new Date().getTime();
       const difference = endTime - now;
 
@@ -107,11 +107,11 @@ export default function PhaseTracker({ hackathonId }: PhaseTrackerProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="font-medium text-gray-700">Start Date</h3>
-                <p className="text-gray-600">{new Date(currentPhase.start_date).toLocaleString()}</p>
+                <p className="text-gray-600">{new Date(currentPhase.start_time).toLocaleString()}</p>
               </div>
               <div>
                 <h3 className="font-medium text-gray-700">End Date</h3>
-                <p className="text-gray-600">{new Date(currentPhase.end_date).toLocaleString()}</p>
+                <p className="text-gray-600">{new Date(currentPhase.end_time).toLocaleString()}</p>
               </div>
             </div>
 
@@ -132,7 +132,7 @@ export default function PhaseTracker({ hackathonId }: PhaseTrackerProps) {
                 <div className={`absolute -left-11 w-6 h-6 rounded-full flex items-center justify-center ${
                   currentPhase?.id === phase.id
                     ? 'bg-blue-500 text-white'
-                    : phase.start_date < new Date().toISOString()
+                    : phase.start_time < new Date().toISOString()
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-300 text-gray-800'
                 }`}>
@@ -141,7 +141,7 @@ export default function PhaseTracker({ hackathonId }: PhaseTrackerProps) {
                 <div className="ml-4">
                   <h4 className="font-medium text-gray-800">{phase.name}</h4>
                   <p className="text-sm text-gray-600">
-                    {new Date(phase.start_date).toLocaleDateString()} - {new Date(phase.end_date).toLocaleDateString()}
+                    {new Date(phase.start_time).toLocaleDateString()} - {new Date(phase.end_time).toLocaleDateString()}
                   </p>
                 </div>
               </div>

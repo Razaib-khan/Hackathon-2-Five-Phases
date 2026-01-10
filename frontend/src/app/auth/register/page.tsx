@@ -12,6 +12,7 @@ export default function RegisterPage() {
     first_name: '',
     last_name: '',
     password: '',
+    password_confirmation: '',
     gdpr_consent: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,6 +48,9 @@ export default function RegisterPage() {
         email: formData.email,
         username: formData.username,
         password: formData.password,
+        password_confirmation: formData.password_confirmation,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         gdpr_consent: formData.gdpr_consent,
       });
 
@@ -188,6 +192,24 @@ export default function RegisterPage() {
                 aria-describedby="password-help"
               />
               <p id="password-help" className="mt-1 text-xs text-gray-500">Enter a secure password</p>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm Password *
+              </label>
+              <input
+                type="password"
+                id="password_confirmation"
+                name="password_confirmation"
+                value={formData.password_confirmation}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isLoading}
+                aria-describedby="password-confirmation-help"
+              />
+              <p id="password-confirmation-help" className="mt-1 text-xs text-gray-500">Re-enter your password for confirmation</p>
             </div>
 
             <div className="mb-6 flex items-start">

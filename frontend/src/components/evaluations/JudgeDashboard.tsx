@@ -24,13 +24,13 @@ export default function JudgeDashboard() {
 
       if (activeTab === 'available') {
         // Get submissions that need to be evaluated by this judge
-        const response = await api.get('/submissions/for-evaluation');
+        const response = await api.get<{ data: Submission[] }>('/submissions/for-evaluation');
         setSubmissions(response.data);
       } else {
         // Get evaluations submitted by this judge
-        const response = await api.get(`/evaluations/evaluator/${user?.id}`);
+        const response = await api.get<any>(`/evaluations/evaluator/${user?.id}`);
         // Transform evaluations to submissions for display
-        const submissionsFromEvals = response.data.map((evalData: any) => evalData.submission);
+        const submissionsFromEvals = response.data.map((evalData: any) => evalData.submission as Submission);
         setSubmissions(submissionsFromEvals);
       }
     } catch (error) {

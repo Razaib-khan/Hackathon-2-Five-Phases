@@ -35,7 +35,7 @@ const UserAuditLog = ({ userId }: UserAuditLogProps) => {
   const fetchUserAuditLogs = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/admin/user-audit-log/${selectedUserId}?days=${days}`);
+      const response = await api.get<{ data: AuditLog[] }>(`/admin/user-audit-log/${selectedUserId}?days=${days}`);
       setLogs(response.data);
     } catch (error) {
       console.error('Error fetching user audit logs:', error);

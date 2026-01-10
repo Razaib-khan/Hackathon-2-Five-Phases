@@ -28,15 +28,15 @@ export default function AdminDashboard() {
       setLoading(true);
 
       // Fetch users
-      const usersResponse = await api.get('/admin/users');
+      const usersResponse = await api.get<{ data: User[] }>('/admin/users');
       setUsers(usersResponse.data);
 
       // Fetch hackathons
-      const hackathonsResponse = await api.get('/admin/hackathons');
+      const hackathonsResponse = await api.get<{ data: Hackathon[] }>('/admin/hackathons');
       setHackathons(hackathonsResponse.data);
 
       // Fetch reports
-      const reportsResponse = await api.get('/admin/reports/platform-usage');
+      const reportsResponse = await api.get<any>('/admin/reports/platform-usage');
       setReports(reportsResponse.data);
     } catch (error) {
       console.error('Error fetching admin data:', error);
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       await api.put(`/admin/users/${userId}/role`, { role: newRole });
 
       // Update local state
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, role: newRole as 'participant' | 'judge' | 'admin' } : u));
       setNewUserRole({ ...newUserRole, [userId]: '' });
     } catch (error) {
       console.error('Error updating user role:', error);

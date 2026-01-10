@@ -37,14 +37,14 @@ export default function TaskForm({ onSuccess, onCancel, initialData }: TaskFormP
       let response;
       if (initialData?.id) {
         // Update existing task
-        response = await api.put(`/tasks/${initialData.id}`, formData);
+        response = await api.put<Task>(`/tasks/${initialData.id}`, formData);
       } else {
         // Create new task
-        response = await api.post('/tasks', formData);
+        response = await api.post<Task>('/tasks', formData);
       }
 
       if (onSuccess) {
-        onSuccess(response.data);
+        onSuccess(response);
       }
 
       // Reset form after successful submission

@@ -28,11 +28,11 @@ export default function TeamManagement({ userId }: TeamManagementProps) {
       setLoading(true);
 
       // Get user's teams
-      const userTeamsResponse = await api.get('/my-teams');
+      const userTeamsResponse = await api.get<{ data: Team[] }>('/my-teams');
       setUserTeams(userTeamsResponse.data);
 
       // Get all available teams
-      const allTeamsResponse = await api.get('/teams');
+      const allTeamsResponse = await api.get<{ data: Team[] }>('/teams');
       setTeams(allTeamsResponse.data);
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -43,7 +43,7 @@ export default function TeamManagement({ userId }: TeamManagementProps) {
 
   const fetchTeamMembers = async (teamId: string) => {
     try {
-      const response = await api.get(`/teams/${teamId}/members`);
+      const response = await api.get<{ data: User[] }>(`/teams/${teamId}/members`);
       setTeamMembers(response.data);
     } catch (error) {
       console.error('Error fetching team members:', error);
@@ -54,12 +54,12 @@ export default function TeamManagement({ userId }: TeamManagementProps) {
     if (!newTeamName.trim()) return;
 
     try {
-      const response = await api.post('/teams', {
+      const response = await api.post<Team>('/teams', {
         name: newTeamName.trim(),
         description: `Team ${newTeamName.trim()} for hackathon collaboration`,
       });
 
-      setUserTeams([...userTeams, response.data]);
+      setUserTeams([...userTeams, response]);
       setNewTeamName('');
       setActiveTab('my-teams');
     } catch (error) {
@@ -71,7 +71,7 @@ export default function TeamManagement({ userId }: TeamManagementProps) {
     try {
       await api.post(`/teams/${teamId}/join`);
       // Refresh user's teams
-      const userTeamsResponse = await api.get('/my-teams');
+      const userTeamsResponse = await api.get<{ data: Team[] }>('/my-teams');
       setUserTeams(userTeamsResponse.data);
     } catch (error) {
       console.error('Error joining team:', error);
@@ -82,7 +82,7 @@ export default function TeamManagement({ userId }: TeamManagementProps) {
     try {
       await api.delete(`/teams/${teamId}/leave`);
       // Refresh user's teams
-      const userTeamsResponse = await api.get('/my-teams');
+      const userTeamsResponse = await api.get<{ data: Team[] }>('/my-teams');
       setUserTeams(userTeamsResponse.data);
     } catch (error) {
       console.error('Error leaving team:', error);

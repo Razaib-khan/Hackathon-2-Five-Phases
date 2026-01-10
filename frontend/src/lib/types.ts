@@ -68,8 +68,11 @@ export interface Phase {
   id: string;
   name: 'registration' | 'ideation' | 'development' | 'submission' | 'judging';
   display_name: string;
+  description?: string;
   start_time: string; // ISO date string
   end_time: string; // ISO date string
+  start_date?: string; // ISO date string (alias for start_time)
+  end_date?: string; // ISO date string (alias for end_time)
   hackathon_id: string;
   is_active: boolean;
   is_current: boolean;
@@ -99,7 +102,9 @@ export interface Submission {
   description: string;
   repository_url?: string;
   demo_url?: string;
+  demo_link?: string;
   video_url?: string;
+  category?: string;
   additional_files?: string[]; // Array of file URLs/paths
   submitted_at: string; // ISO date string
   updated_at: string; // ISO date string
@@ -146,15 +151,20 @@ export interface Notification {
   read_at?: string; // ISO date string
 }
 
+export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: TaskStatus;
+  priority: TaskPriority;
   due_date?: string; // ISO date string
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
+  completed_at?: string; // ISO date string
   assigned_to?: string; // User ID
   created_by: string; // User ID
   project_id?: string;

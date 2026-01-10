@@ -20,7 +20,8 @@ class TaskService:
             created_by=user_id,
             assigned_to=task_data.assigned_to,
             due_date=task_data.due_date,
-            is_public=task_data.is_public
+            is_public=task_data.is_public,
+            project_id=getattr(task_data, 'project_id', None)
         )
         db.add(db_task)
         db.commit()

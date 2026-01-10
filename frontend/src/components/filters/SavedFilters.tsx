@@ -62,6 +62,10 @@ const SavedFilters: React.FC<SavedFiltersProps> = ({
     })));
   };
 
+  const handleSelectFilter = (filter: SavedFilter) => {
+    onSelectFilter(filter);
+  };
+
   if (loading) {
     return (
       <div className="p-4">
@@ -102,7 +106,7 @@ const SavedFilters: React.FC<SavedFiltersProps> = ({
             <li
               key={filter.id}
               className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-              onClick={() => onSelectFilter(filter)}
+              onClick={() => handleSelectFilter(filter)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center">

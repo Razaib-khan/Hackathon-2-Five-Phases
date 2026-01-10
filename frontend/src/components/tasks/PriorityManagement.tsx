@@ -52,8 +52,8 @@ const PriorityManagement = () => {
       setLoading(true);
 
       // Fetch priority statistics
-      const statsResponse = await api.get('/priority/statistics');
-      setPriorityStats(statsResponse.data.by_priority);
+      const statsResponse = await api.get<{ by_priority: PriorityStats }>('/priority/statistics');
+      setPriorityStats(statsResponse.by_priority);
 
       // Fetch tasks for each priority level
       const priorities = ['critical', 'high', 'medium', 'low'];
@@ -66,8 +66,8 @@ const PriorityManagement = () => {
 
       for (const priority of priorities) {
         try {
-          const response = await api.get(`/priority/tasks/${priority}?limit=100`);
-          overview[priority as keyof PriorityOverview] = response.data;
+          const response = await api.get<Task[]>(`/priority/tasks/${priority}?limit=100`);
+          overview[priority as keyof PriorityOverview] = response;
         } catch (error) {
           console.error(`Error fetching ${priority} tasks:`, error);
         }

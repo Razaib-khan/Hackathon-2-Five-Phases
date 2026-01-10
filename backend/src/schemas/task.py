@@ -26,11 +26,13 @@ class TaskBase(BaseModel):
     assigned_to: Optional[str] = None
     due_date: Optional[datetime] = None
     is_public: Optional[bool] = False
+    project_id: Optional[uuid.UUID] = None
 
 
 class TaskCreate(TaskBase):
     title: str  # Required field
     priority: TaskPriority  # Required field
+    project_id: Optional[uuid.UUID] = None
 
 
 class TaskUpdate(BaseModel):
@@ -41,6 +43,7 @@ class TaskUpdate(BaseModel):
     assigned_to: Optional[str] = None
     due_date: Optional[datetime] = None
     is_public: Optional[bool] = None
+    project_id: Optional[uuid.UUID] = None
 
 
 class TaskResponse(TaskBase):
@@ -50,6 +53,8 @@ class TaskResponse(TaskBase):
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None
+    project_id: Optional[uuid.UUID] = None
+    tags: Optional[List[str]] = []  # Simplified tags as list of tag names
 
     class Config:
         from_attributes = True

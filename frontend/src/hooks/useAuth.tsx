@@ -1,5 +1,5 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { User, Token } from '../lib/types';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { User } from '../lib/types';
 import { apiService } from '../lib/api';
 
 interface AuthContextType {
@@ -7,15 +7,28 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  api: typeof import('../lib/api').apiService;
   login: (credentials: { username: string; password: string }) => Promise<void>;
-  register: (userData: { email: string; username: string; password: string; gdpr_consent: boolean }) => Promise<void>;
+  register: (userData: {
+    email: string;
+    username: string;
+    password: string;
+    password_confirmation: string;
+    first_name: string;
+    last_name: string;
+    gdpr_consent: boolean
+  }) => Promise<void>;
   logout: () => void;
   updateUser: (profileData: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,14 +71,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const register = async (userData: { email: string; username: string; password: string; gdpr_consent: boolean }) => {
+  const register = async (userData: {
+    email: string;
+    username: string;
+    password: string;
+    password_confirmation: string;
+    first_name: string;
+    last_name: string;
+    gdpr_consent: boolean
+  }) => {
     try {
       const response = await apiService.register(userData);
-      const { access_token, user: newUser } = response;
+
+      // Handle different possible response structures from backend
+      let token: string;
+      let newUser: User;
+
+      if (response && typeof response === 'object' && 'access_token' in response && 'user' in response) {
+        // Standard response format
+        const typedResponse = response as { access_token: string; user: User };
+        token = typedResponse.access_token;
+        newUser = typedResponse.user;
+      } else if (response && typeof response === 'object' && 'token' in response && 'user' in response) {
+        // Alternative format with 'token' field
+        const typedResponse = response as { token: string; user: User };
+        token = typedResponse.token;
+        newUser = typedResponse.user;
+      } else {
+        // If response structure is unknown, try to get user profile
+        const profile = await apiService.getProfile();
+        setUser(profile);
+        return;
+      }
 
       // Store token and update context
-      apiService.setToken(access_token);
-      setToken(access_token);
+      apiService.setToken(token);
+      setToken(token);
       setUser(newUser);
     } catch (error) {
       throw error;
@@ -96,6 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     token,
     isAuthenticated: !!user,
     isLoading,
+    api: apiService,
     login,
     register,
     logout,

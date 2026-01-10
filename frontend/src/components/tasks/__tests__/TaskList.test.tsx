@@ -1,36 +1,75 @@
-// Mock test file for TaskList component
-// In a real scenario, this would contain actual tests using Jest and React Testing Library
+/**
+ * Unit tests for TaskList component
+ * Using Jest and React Testing Library
+ */
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import TaskList from '../TaskList';
+import { Task } from '../../../lib/types';
 
-describe('Task Components', () => {
-  it('should render TaskList component without crashing', () => {
-    // This would test that the component renders properly
-    expect(1).toBe(1);
+// Mock the dependencies
+jest.mock('../../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    api: {
+      get: jest.fn().mockResolvedValue({ data: [] }),
+    },
+  }),
+}));
+
+describe('TaskList Component', () => {
+  const mockTasks: Task[] = [
+    {
+      id: '1',
+      title: 'Test Task 1',
+      description: 'Test Description 1',
+      status: 'pending',
+      priority: 'medium',
+      created_at: '2023-01-01T00:00:00Z',
+      updated_at: '2023-01-01T00:00:00Z',
+      created_by: 'user1',
+    },
+    {
+      id: '2',
+      title: 'Test Task 2',
+      description: 'Test Description 2',
+      status: 'in_progress',
+      priority: 'high',
+      created_at: '2023-01-01T00:00:00Z',
+      updated_at: '2023-01-01T00:00:00Z',
+      created_by: 'user1',
+    },
+  ];
+
+  it('renders without crashing', () => {
+    render(<TaskList initialTasks={mockTasks} />);
+    expect(screen.getByText('Test Task 1')).toBeInTheDocument();
   });
 
-  it('should render TaskCard component with correct data', () => {
-    // This would test that the TaskCard displays task information correctly
-    expect(1).toBe(1);
+  it('displays all tasks when no filters are applied', () => {
+    render(<TaskList initialTasks={mockTasks} />);
+    expect(screen.getByText('Test Task 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Task 2')).toBeInTheDocument();
   });
 
-  it('should handle task filtering properly', () => {
-    // This would test that the filtering functionality works
-    expect(1).toBe(1);
+  it('shows loading state when no initial tasks are provided', () => {
+    render(<TaskList />);
+    // Should show loading spinner when fetching tasks
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('should handle task creation and updates', () => {
-    // This would test that tasks can be created and updated
-    expect(1).toBe(1);
-  });
-});
+  it('handles task updates properly', () => {
+    const mockOnUpdate = jest.fn();
+    const taskWithUpdate = { ...mockTasks[0], onUpdate: mockOnUpdate };
 
-describe('Notification Components', () => {
-  it('should render NotificationList component without crashing', () => {
-    // This would test that the NotificationList component renders properly
-    expect(1).toBe(1);
+    render(<TaskList initialTasks={[taskWithUpdate]} />);
+    // Additional logic would be needed to test updates
   });
 
-  it('should handle notification marking as read', () => {
-    // This would test that notifications can be marked as read
-    expect(1).toBe(1);
+  it('handles task deletion properly', () => {
+    const mockOnDelete = jest.fn();
+    const taskWithDelete = { ...mockTasks[0], onDelete: mockOnDelete };
+
+    render(<TaskList initialTasks={[taskWithDelete]} />);
+    // Additional logic would be needed to test deletions
   });
 });

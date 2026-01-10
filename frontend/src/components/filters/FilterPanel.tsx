@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { TaskPriority, TaskStatus } from '../../types';
 
 interface FilterPanelProps {
   onFilterChange: (filters: any) => void;

@@ -34,7 +34,7 @@ export default function TaskList({ initialTasks }: TaskListProps) {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/tasks');
+      const response = await api.get<{ data: Task[] }>('/tasks');
       setTasks(response.data);
     } catch (error) {
       console.error('Error fetching tasks:', error);

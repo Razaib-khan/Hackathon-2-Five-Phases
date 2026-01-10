@@ -27,12 +27,12 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
   const handleStatusChange = async (newStatus: Task['status']) => {
     try {
       setLoading(true);
-      const response = await api.put(`/tasks/${task.id}`, {
+      const response = await api.put<Task>(`/tasks/${task.id}`, {
         ...task,
         status: newStatus,
       });
 
-      onUpdate(response.data);
+      onUpdate(response);
     } catch (error) {
       console.error('Error updating task status:', error);
     } finally {
@@ -47,12 +47,12 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
       // Store the old priority for the notification
       const oldPriority = task.priority;
 
-      const response = await api.put(`/tasks/${task.id}`, {
+      const response = await api.put<Task>(`/tasks/${task.id}`, {
         ...task,
         priority: newPriority,
       });
 
-      onUpdate(response.data);
+      onUpdate(response);
 
       // Add notification about priority change
       addNotification({
@@ -72,7 +72,7 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
 
     try {
       setLoading(true);
-      const response = await api.put(`/tasks/${task.id}`, {
+      const response = await api.put<Task>(`/tasks/${task.id}`, {
         ...task,
         ...editForm,
       });
@@ -86,7 +86,7 @@ export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
         });
       }
 
-      onUpdate(response.data);
+      onUpdate(response);
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating task:', error);

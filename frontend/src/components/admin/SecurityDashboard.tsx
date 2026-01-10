@@ -43,8 +43,8 @@ const SecurityDashboard = () => {
   const fetchSecurityDashboard = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/admin/security-dashboard?days=${days}`);
-      setData(response.data);
+      const response = await api.get<SecurityDashboardData>(`/admin/security-dashboard?days=${days}`);
+      setData(response);
     } catch (error) {
       console.error('Error fetching security dashboard:', error);
     } finally {

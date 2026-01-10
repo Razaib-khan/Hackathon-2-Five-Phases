@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TaskPriority, TaskStatus } from '../../types';
+import { TaskPriority, TaskStatus } from '../../lib/types';
 
 interface BulkOperationsProps {
   selectedTaskIds: string[];

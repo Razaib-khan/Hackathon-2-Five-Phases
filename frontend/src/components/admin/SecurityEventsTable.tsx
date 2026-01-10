@@ -25,7 +25,7 @@ const SecurityEventsTable = () => {
   const fetchSecurityEvents = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/admin/security-events?days=${days}`);
+      const response = await api.get<{ data: SecurityEvent[] }>(`/admin/security-events?days=${days}`);
       setEvents(response.data);
     } catch (error) {
       console.error('Error fetching security events:', error);
