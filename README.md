@@ -1,3 +1,11 @@
+---
+title: AIDO Todo Backend
+emoji: 📝
+colorFrom: blue
+colorTo: purple
+sdk: docker
+---
+
 # AIDO - AI-Powered Interactive Task Manager
 
 A colorful, interactive command-line task manager built with Python and Rich.
@@ -8,6 +16,39 @@ A colorful, interactive command-line task manager built with Python and Rich.
 - Rich terminal UI with colored output and formatted tables
 - Single-command mode for quick task operations
 - Full CRUD operations for task management
+
+## Backend API
+
+The full-stack version includes a backend API built with FastAPI that supports:
+
+- User authentication (register/login)
+- Task management (CRUD operations)
+- Database integration with PostgreSQL
+
+### Backend Endpoints
+
+- `GET /` - Health check
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `GET /api/users/{user_id}/tasks` - Get user tasks
+- `POST /api/users/{user_id}/tasks` - Create task
+- `PUT /api/users/{user_id}/tasks/{task_id}` - Update task
+- `DELETE /api/users/{user_id}/tasks/{task_id}` - Delete task
+- `PATCH /api/users/{user_id}/tasks/{task_id}/complete` - Toggle task completion
+
+## Deployment
+
+### Backend to Hugging Face Spaces
+
+To deploy the backend to Hugging Face Spaces:
+
+1. Create a new Space on Hugging Face
+2. Connect this repository
+3. Use Docker SDK
+4. Set environment variables:
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `JWT_SECRET_KEY`: Secret key for JWT tokens
+   - `AUTH_SECRET`: Authentication secret
 
 ## Prerequisites
 
