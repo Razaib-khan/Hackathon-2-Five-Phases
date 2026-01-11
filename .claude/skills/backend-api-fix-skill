@@ -1,0 +1,19 @@
+# Backend API Fix Skill
+
+This skill handles backend API configuration fixes, particularly around FastAPI setup, middleware configuration, and security concerns.
+
+## Purpose
+- Fix FastAPI configurations
+- Address middleware ordering and functionality
+- Configure proper error handling
+- Address security configuration issues
+- Ensure proper dependency injection and routing
+
+## Usage
+This skill should be invoked when backend API configuration issues are identified that need to be fixed.
+
+## Process
+1. Analyze the current API configuration
+2. Identify specific issues (middleware conflicts, security issues, routing problems, etc.)
+3. Implement fixes to ensure proper API functionality
+4. Verify that security measures don't interfere with normal operation

@@ -1,0 +1,20 @@
+# Authentication Security Fix Skill
+
+This skill handles authentication security fixes, particularly around password validation, bcrypt limitations, and passlib compatibility.
+
+## Purpose
+- Fix password validation issues before hashing
+- Address bcrypt 72-byte limit enforcement
+- Fix passlib/bcrypt compatibility issues
+- Implement proper error handling for authentication failures
+- Ensure secure password hashing practices
+
+## Usage
+This skill should be invoked when authentication security issues are identified that need to be fixed.
+
+## Process
+1. Analyze the current authentication implementation
+2. Identify specific issues (password length validation, bcrypt compatibility, etc.)
+3. Implement fixes to ensure proper password validation before hashing
+4. Add proper error handling to return appropriate HTTP status codes
+5. Verify that authentication flows work correctly without 500 errors

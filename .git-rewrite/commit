@@ -1,0 +1,41 @@
+tree e9b62cc696fbc986e8e9d7a8ae0493695a755932
+parent 75e37e76934ae9fd13050b7b99c52316f741cd39
+author Razaib-khan <khanrazaib9@gmail.com> 1767131208 +0500
+committer Razaib-khan <khanrazaib9@gmail.com> 1767800796 +0500
+
+feat(github-pages): add automated GitHub Pages deployment for frontend
+
+Deployment Infrastructure:
+- Add deploy-github-pages.yml workflow for standalone GitHub Pages deployment
+- Update frontend-ci.yml with deploy-github-pages job (automatic on main push)
+- Configure Next.js static export for GitHub Pages (output: 'export')
+- Set basePath to /Hackathon-2-Five-Phases/ for repository subdirectory
+- Enable trailing slashes for proper static routing
+- Disable image optimization for static export compatibility
+
+Configuration Changes:
+- frontend/next.config.js: Add GitHub Pages configuration with GITHUB_PAGES env flag
+- Conditional output mode: 'export' (GitHub Pages) vs 'standalone' (server)
+- Conditional basePath: repository path vs root domain
+- Unoptimized images for static export
+
+Workflows:
+- deploy-github-pages.yml: Standalone workflow with manual trigger support
+- frontend-ci.yml: Add deploy-github-pages job (depends on lint + test)
+- Both workflows: Build, upload artifact, deploy to GitHub Pages
+- Auto-deployment on main branch push
+
+Documentation:
+- GITHUB_PAGES_DEPLOYMENT.md: Complete setup & troubleshooting guide
+- Covers setup steps, configuration, deployment methods, limitations
+- Includes rollback procedures and performance optimization tips
+- Troubleshooting section for common issues
+
+Deployment URL:
+- https://razaib-khan.github.io/Hackathon-2-Five-Phases/
+- Auto-deployed on every push to main branch
+- Free static hosting via GitHub Pages
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
