@@ -1,8 +1,0 @@
-fix(workflows): use npm install instead of npm ci
-
-npm ci requires an existing package-lock.json file.
-Since we don't have one yet, use npm install which will
-generate the lock file on first run.
-
-This fixes the GitHub Actions workflow failures for both
-deploy-github-pages.yml and frontend-ci.yml workflows.
