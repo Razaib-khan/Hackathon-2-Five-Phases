@@ -1,23 +1,35 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getToken } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
+  const { session, isLoading } = useAuth();
+  const [redirected, setRedirected] = useState(false);
   const router = useRouter();
 
+  // Check if user is authenticated and redirect to dashboard if they are
   useEffect(() => {
-    // Check if user has a token stored
-    const token = getToken();
-    if (token) {
-      // Redirect to dashboard page if authenticated
+    if (!isLoading && session && !redirected) {
+      setRedirected(true);
       router.push('/dashboard');
-    } else {
-      // Redirect to login if not authenticated
+    } else if (!isLoading && !session && !redirected) {
+      setRedirected(true);
       router.push('/auth/login');
     }
-  }, [router]);
+  }, [session, isLoading, redirected, router]);
+
+  if (isLoading || (session && !redirected) || (!session && !redirected)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 font-sans">
