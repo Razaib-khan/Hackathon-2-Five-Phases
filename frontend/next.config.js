@@ -6,6 +6,9 @@ const nextConfig = {
   // Export static HTML for GitHub Pages
   output: 'export',
 
+  // Base path for GitHub Pages (repository name)
+  basePath: '/Hackathon-2-Five-Phases',
+
   // Environment variables available to the client
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
