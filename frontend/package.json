@@ -1,7 +1,7 @@
 {
   "name": "aido-frontend",
   "version": "2.0.0",
-  "description": "AIDO Todo Frontend - Phase 2 Web Application",
+  "description": "AIDO Todo Frontend - Phase 2 Web Application with Hugging Face Backend Integration",
   "private": true,
   "scripts": {
     "dev": "next dev",
