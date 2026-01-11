@@ -1,0 +1,19 @@
+# Frontend-Backend Alignment Skill
+
+This skill handles frontend-backend alignment issues, particularly around API contracts, health checks, and cross-service communication.
+
+## Purpose
+- Fix API contracts and communication patterns
+- Address health check endpoint implementations
+- Handle CORS and cross-origin issues
+- Ensure proper environment variable configurations
+- Verify service-to-service communication
+
+## Usage
+This skill should be invoked when frontend-backend alignment issues are identified that need to be fixed.
+
+## Process
+1. Analyze the current frontend-backend communication
+2. Identify specific issues (missing health checks, API contract mismatches, etc.)
+3. Implement fixes to ensure proper service communication
+4. Verify that both services can communicate properly

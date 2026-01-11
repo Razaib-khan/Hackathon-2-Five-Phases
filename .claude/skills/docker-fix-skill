@@ -1,0 +1,19 @@
+# Docker Configuration Fix Skill
+
+This skill handles Docker configuration fixes, particularly around multi-stage builds, health checks, and proper initialization sequences.
+
+## Purpose
+- Fix Dockerfile configurations
+- Address build-time vs runtime issues
+- Configure proper health check endpoints
+- Optimize multi-stage builds
+- Handle environment-specific configurations
+
+## Usage
+This skill should be invoked when Docker configuration issues are identified that need to be fixed.
+
+## Process
+1. Analyze the current Docker configuration
+2. Identify specific issues (missing health checks, incorrect build sequences, etc.)
+3. Implement fixes to ensure proper container startup and health checks
+4. Verify that containers can communicate properly in a multi-container environment
