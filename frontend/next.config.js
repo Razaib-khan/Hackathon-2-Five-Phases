@@ -3,6 +3,9 @@ const nextConfig = {
   // Enable React strict mode for better development experience
   reactStrictMode: true,
 
+  // Export static HTML for GitHub Pages
+  output: 'export',
+
   // Environment variables available to the client
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -14,6 +17,12 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+  },
+
+  // Disable server-side rendering for static export
+  trailingSlash: true,
+  images: {
+    unoptimized: true, // Required for GitHub Pages
   },
 }
 
