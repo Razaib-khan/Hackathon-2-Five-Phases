@@ -44,7 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+      });
+
+      const responsePromise = fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,8 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      // Race the fetch request against the timeout
+      const response = await Promise.race([responsePromise, timeoutPromise]) as Response;
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Login failed' }));
         throw new Error(errorData.detail || 'Login failed');
       }
 
@@ -69,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect to tasks
       window.location.href = '/tasks';
     } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error - unable to connect to server');
+      }
       throw error;
     }
   };
@@ -79,7 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000); // 10 second timeout
+      });
+
+      const responsePromise = fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,8 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      // Race the fetch request against the timeout
+      const response = await Promise.race([responsePromise, timeoutPromise]) as Response;
+
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Registration failed' }));
         throw new Error(errorData.detail || 'Registration failed');
       }
 
@@ -104,6 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect to tasks
       window.location.href = '/tasks';
     } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error - unable to connect to server');
+      }
       throw error;
     }
   };
