@@ -82,12 +82,12 @@ export default function TasksPage() {
   }, [user, fetchTasks]);
 
   // Create task
-  const handleCreate = async (data: TaskCreateRequest) => {
+  const handleCreate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
-      await createTask(user.id, data);
+      await createTask(user.id, data as TaskCreateRequest);
       setShowCreateModal(false);
       fetchTasks();
     } finally {
@@ -96,12 +96,12 @@ export default function TasksPage() {
   };
 
   // Update task
-  const handleUpdate = async (data: TaskUpdateRequest) => {
+  const handleUpdate = async (data: TaskCreateRequest | TaskUpdateRequest) => {
     if (!user || !editingTask) return;
 
     setIsSubmitting(true);
     try {
-      await updateTask(user.id, editingTask.id, data);
+      await updateTask(user.id, editingTask.id, data as TaskUpdateRequest);
       setEditingTask(null);
       fetchTasks();
     } finally {

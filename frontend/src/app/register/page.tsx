@@ -66,7 +66,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await register(email, password);
+      await register(email, password, confirmPassword);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
