@@ -2,12 +2,12 @@ name: Deploy Frontend to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ phase-2-working ]
     paths:
       - 'frontend/**'
       - '.github/workflows/deploy-frontend.yml'
   pull_request:
-    branches: [ main, master ]
+    branches: [ phase-2-working ]
     paths:
       - 'frontend/**'
   workflow_dispatch:
